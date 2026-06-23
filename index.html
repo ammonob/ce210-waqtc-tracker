@@ -32,7 +32,6 @@
     import { getFirestore, collection, getDocs, doc, updateDoc, addDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
     const firebaseConfig = {
-      // PASTE YOUR KEYS HERE AGAIN TO BE SURE
       apiKey: "AIzaSyC0tR3hpuQpTHTEObm21azoQKq9Qbm4LP0",
       authDomain: "ce-210-waqtc-progress-tracker.firebaseapp.com",
       projectId: "ce-210-waqtc-progress-tracker",
@@ -44,7 +43,6 @@
     const db = getFirestore(initializeApp(firebaseConfig));
     let isAdmin = false;
 
-    // Login logic
     document.getElementById('adminLoginBtn').onclick = () => {
       const pass = prompt("Enter Password:");
       if (pass === "WAQTC2026") {
@@ -70,14 +68,19 @@
         students.sort((a,b) => a.name.localeCompare(b.name)).forEach(s => {
           html += `<tr class="border-b">
             <td class="p-3 font-medium">${isAdmin ? `<button onclick="deleteStudent('${s.id}')" class="text-red-500 mr-2">×</button>`:''}${s.name}</td>` +
-            sortedTests.map(t => `<td class="p-2 text-center border-l"><input type="checkbox" ${s[t] ? 'checked' : ''} onchange="updateToggle('${s.id}', '${t}', this.checked)"></td>`).join('') +
+            sortedTests.map(t => `
+              <td class="p-2 text-center border-l">
+                <label class="relative inline-flex items-center cursor-pointer">
+                  <input type="checkbox" class="sr-only peer" ${s[t] ? 'checked' : ''} onchange="updateToggle('${s.id}', '${t}', this.checked)">
+                  <div class="w-9 h-5 bg-gray-200 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600"></div>
+                </label>
+              </td>`).join('') +
             `</tr>`;
         });
         dashboard.innerHTML = html + `</tbody></table>`;
-      } catch(e) { console.error(e); dashboard.innerHTML = "<p class='p-10 text-red-500'>Error loading data. Check console.</p>"; }
+      } catch(e) { console.error(e); dashboard.innerHTML = "<p class='p-10 text-red-500'>Error loading data.</p>"; }
     }
 
-    // Export functions to window so the HTML 'onclick' can find them
     window.updateToggle = async (id, field, val) => await updateDoc(doc(db, 'students', id), {[field]: val});
     window.deleteStudent = async (id) => { await deleteDoc(doc(db, 'students', id)); renderTable(); };
     window.deleteTest = async (test) => {
