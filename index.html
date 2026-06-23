@@ -31,7 +31,7 @@
 
   <main class="px-6 -mt-12">
     <section class="max-w-7xl mx-auto bg-white rounded-xl shadow-[0_2px_15px_-3px_rgba(0,0,0,0.07),0_10px_20px_-2px_rgba(0,0,0,0.04)] border border-gray-100 p-8 mb-10">
-      <h2 class="text-xs font-black text-gray-400 uppercase tracking-widest mb-6">Class Leaderboard</h2>
+      <h2 class="text-xs text-gray-500 uppercase tracking-widest mb-6">Class Leaderboard</h2>
       <div id="leaderboardContent" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5"></div>
     </section>
 
@@ -50,8 +50,9 @@
     </div>
 
     <div class="max-w-7xl mx-auto">
-      <h2 class="text-xs font-black text-gray-500 uppercase tracking-widest mb-4">Certification Matrix</h2>
-      <div id="dashboard" class="bg-white shadow-sm rounded-lg overflow-x-auto border border-gray-200 mb-6">
+      <h2 class="bg-[#1a3a5f] text-white p-4 rounded-t-lg text-sm tracking-wide shadow-sm">Certification Checklist</h2>
+      
+      <div id="dashboard" class="bg-white shadow-sm rounded-b-lg overflow-x-auto border border-gray-200 mb-6">
         <p class="p-10 text-center text-gray-400 italic">Connecting to secure database...</p>
       </div>
       <div class="text-center text-gray-500 text-sm mb-12">
@@ -109,13 +110,13 @@
           let icon = rank === 1 ? '🏆' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : `<span class="text-gray-300 text-xs">#${rank}</span>`;
           
           return `
-            <div class="${tint} p-5 rounded-lg border shadow-sm transition-transform hover:scale-[1.02]">
+            <div class="${tint} p-5 rounded-lg border shadow-sm transition-transform">
               <div class="flex justify-between items-center mb-3">
                 <div class="flex items-center gap-3">
                   <span class="text-xl">${icon}</span>
-                  <span class="font-bold text-gray-800 text-sm tracking-tight">${s.name}</span>
+                  <span class="text-gray-800 text-sm tracking-tight">${s.name}</span>
                 </div>
-                <span class="font-bold text-blue-600 text-sm">${pct}%</span>
+                <span class="text-blue-600 text-sm">${pct}%</span>
               </div>
               <div class="w-full bg-gray-100 rounded-full h-2.5">
                 <div class="bg-gradient-to-r from-blue-600 to-green-400 h-2.5 rounded-full shadow-[0_0_8px_rgba(59,130,246,0.3)]" style="width: ${pct}%"></div>
@@ -125,16 +126,15 @@
 
         let sortedTests = Array.from(tests).sort();
         let html = `<table class="w-full text-sm border-collapse border-0"><thead><tr class="bg-[#1a3a5f] text-white">
-          <th class="p-4 text-left whitespace-nowrap sticky left-0 z-20 bg-[#1a3a5f] border-r border-white/10 shadow-[4px_0_10px_rgba(0,0,0,0.15)] uppercase text-[10px] tracking-widest font-black">Student</th>` + 
-          sortedTests.map(t => `<th class="p-4 whitespace-nowrap uppercase text-[10px] tracking-widest font-black">
+          <th class="p-4 text-left whitespace-nowrap sticky left-0 z-20 bg-[#1a3a5f] border-r border-white/10 shadow-[4px_0_10px_rgba(0,0,0,0.15)] text-[10px] tracking-widest">Student</th>` + 
+          sortedTests.map(t => `<th class="p-4 whitespace-nowrap text-[10px] tracking-widest font-normal">
             <a href="https://www.waqtc.org/technician-resources/" target="_blank" class="hover:underline text-blue-300">${t.replace(/_/g,' ')}</a> 
-            ${isAdmin ? `<button onclick="window.deleteTest('${t}')" class="text-red-400 ml-2 hover:text-white">×</button>`:''}
-          </th>`).join('') +
+            ${isAdmin ? `<button onclick="window.deleteTest('${t}')" class="text-red-400 ml-2 hover:text-white">×</button>`:''}</th>`).join('') +
           `</tr></thead><tbody>`;
 
         students.sort((a,b) => a.name.localeCompare(b.name)).forEach(s => {
           html += `<tr class="border-b border-gray-100 hover:bg-gray-50 transition-colors">
-            <td class="p-4 font-bold text-gray-700 sticky left-0 z-10 bg-white border-r border-gray-100 shadow-[4px_0_10px_rgba(0,0,0,0.03)] whitespace-nowrap">${isAdmin ? `<button onclick="window.deleteStudent('${s.id}')" class="text-red-500 mr-3">×</button>`:''}${s.name}</td>` +
+            <td class="p-4 text-gray-700 sticky left-0 z-10 bg-white border-r border-gray-100 shadow-[4px_0_10px_rgba(0,0,0,0.03)] whitespace-nowrap">${isAdmin ? `<button onclick="window.deleteStudent('${s.id}')" class="text-red-500 mr-3">×</button>`:''}${s.name}</td>` +
             sortedTests.map(t => `<td class="p-4 text-center">
               <label class="relative inline-flex items-center cursor-pointer">
                 <input type="checkbox" class="sr-only peer toggle-glow" ${s[t] ? 'checked' : ''} onchange="window.updateToggle('${s.id}', '${t}', this.checked)">
