@@ -5,219 +5,93 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>CE 210 Progress Tracker</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <style>
-    /* Adds a subtle shadow to the sticky column when scrolling */
-    .sticky-col {
-      box-shadow: 2px 0 5px -2px rgba(0,0,0,0.1);
-    }
-  </style>
 </head>
-<body class="bg-slate-50 p-6 md:p-12 font-sans text-gray-800">
+<body class="bg-slate-50 p-6 font-sans text-gray-800">
 
   <div class="max-w-7xl mx-auto">
-    <div class="mb-10 text-center">
-      <h1 class="text-3xl font-bold text-blue-800 flex justify-center items-center gap-3">
-        <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path></svg>
-        CE 210 WAQTC Progress Tracker
-      </h1>
-      <p class="text-gray-500 mt-2">Live Firebase Certification Matrix</p>
+    <div class="mb-8 flex justify-between items-center">
+      <h1 class="text-2xl font-bold text-blue-800">WAQTC Certification Matrix</h1>
+      <button id="adminLoginBtn" class="bg-gray-800 text-white px-4 py-2 rounded-lg text-sm">Admin Access</button>
     </div>
 
-    <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200 mb-8 max-w-4xl mx-auto">
-      <h3 class="text-lg font-bold mb-4 text-gray-700 border-b pb-2">Admin Dashboard</h3>
-      
+    <div id="adminPanel" class="hidden bg-red-50 p-6 rounded-xl shadow-sm border border-red-200 mb-8 max-w-4xl mx-auto">
+      <h3 class="text-lg font-bold mb-4 text-red-700">Admin Controls</h3>
       <div class="grid md:grid-cols-2 gap-6">
-        <div class="flex flex-col gap-2">
-          <label class="text-sm font-semibold text-gray-600">Add New Student</label>
-          <div class="flex gap-2">
-            <input type="text" id="newStudentName" placeholder="Student Name" class="border p-2 rounded-lg flex-grow focus:outline-none focus:ring-2 focus:ring-blue-400">
-            <button id="addStudentBtn" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors">Add</button>
-          </div>
-        </div>
-
-        <div class="flex flex-col gap-2">
-          <label class="text-sm font-semibold text-gray-600">Add New Test</label>
-          <div class="flex gap-2">
-            <input type="text" id="newTestName" placeholder="e.g. T99 PROCTOR" class="border p-2 rounded-lg flex-grow focus:outline-none focus:ring-2 focus:ring-green-400">
-            <button id="addTestBtn" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium transition-colors">Add</button>
-          </div>
-        </div>
+        <input type="text" id="newStudentName" placeholder="Student Name" class="border p-2 rounded">
+        <button id="addStudentBtn" class="bg-blue-600 text-white px-4 py-2 rounded">Add Student</button>
+        <input type="text" id="newTestName" placeholder="e.g. T99 PROCTOR" class="border p-2 rounded">
+        <button id="addTestBtn" class="bg-green-600 text-white px-4 py-2 rounded">Add New Test</button>
       </div>
     </div>
 
-    <div id="loading" class="text-center py-10 text-gray-500 animate-pulse">
-      Connecting to database...
-    </div>
-
-    <div id="dashboard" class="invisible"></div>
+    <div id="dashboard" class="overflow-x-auto bg-white rounded-xl shadow-sm border border-gray-300">
+      </div>
   </div>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-    import { getFirestore, collection, getDocs, doc, updateDoc, addDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+    import { getFirestore, collection, getDocs, doc, updateDoc, addDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-    // --- PASTE YOUR FIREBASE CONFIG HERE ---
-    const firebaseConfig = {
-      apiKey: "YOUR_API_KEY_HERE",
-      authDomain: "ce-210-waqtc-progress-tracker.firebaseapp.com",
-      projectId: "ce-210-waqtc-progress-tracker",
-      storageBucket: "ce-210-waqtc-progress-tracker.firebasestorage.app",
-      messagingSenderId: "951204967927",
-      appId: "1:951204967927:web:721cb7e4119bb0042e6af2"
+    // --- PASTE YOUR KEYS HERE ---
+    const firebaseConfig = { /* ...YOUR KEYS... */ };
+    
+    const db = getFirestore(initializeApp(firebaseConfig));
+    let isAdmin = false;
+
+    // Password Protection
+    document.getElementById('adminLoginBtn').onclick = () => {
+      const pass = prompt("Enter Admin Password:");
+      if (pass === "WAQTC2026") {
+        isAdmin = true;
+        document.getElementById('adminPanel').classList.remove('hidden');
+        initDashboard();
+      } else {
+        alert("Incorrect password");
+      }
     };
 
-    const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
-
-    let activeTests = new Set(); 
-
     async function initDashboard() {
-      try {
-        const querySnapshot = await getDocs(collection(db, "students"));
-        
-        document.getElementById('loading').style.display = 'none';
-        const dashboard = document.getElementById('dashboard');
-        dashboard.innerHTML = ''; 
-        dashboard.classList.remove('invisible');
-        activeTests.clear();
+      const querySnapshot = await getDocs(collection(db, "students"));
+      const dashboard = document.getElementById('dashboard');
+      let students = [];
+      let tests = new Set();
 
-        const students = [];
+      querySnapshot.forEach(d => {
+        students.push({ id: d.id, ...d.data() });
+        Object.keys(d.data()).forEach(k => k !== 'name' && tests.add(k));
+      });
 
-        querySnapshot.forEach((doc) => {
-          const studentData = doc.data();
-          students.push({ id: doc.id, data: studentData });
-          
-          Object.keys(studentData).forEach(key => {
-            if (key !== "name") activeTests.add(key);
-          });
-        });
+      const sortedTests = Array.from(tests).sort();
+      
+      let html = `<table class="w-full text-sm"><thead><tr class="bg-blue-900 text-white">
+        <th class="p-4 text-left">Student</th>` + 
+        sortedTests.map(t => `<th class="p-2">${t.replace(/_/g, ' ')} ${isAdmin ? `<button onclick="deleteTest('${t}')" class="text-red-300 ml-1">x</button>` : ''}</th>`).join('') +
+        `</tr></thead><tbody>`;
 
-        // Sort students alphabetically
-        students.sort((a, b) => a.data.name.localeCompare(b.data.name));
-        
-        // Sort tests alphabetically to create consistent columns
-        const sortedTests = Array.from(activeTests).sort();
+      students.forEach(s => {
+        html += `<tr class="border-b">
+          <td class="p-4 font-bold">${isAdmin ? `<button onclick="deleteStudent('${s.id}')" class="text-red-500 mr-2">x</button>` : ''}${s.name}</td>` +
+          sortedTests.map(t => `<td class="p-2 text-center"><input type="checkbox" ${s[t] ? 'checked' : ''} onchange="updateToggle('${s.id}', '${t}', this.checked)"></td>`).join('') +
+          `</tr>`;
+      });
 
-        // 1. Build the Table Header
-        let theadHTML = `
-          <tr class="bg-blue-900 text-white text-xs font-bold uppercase tracking-wide text-center border-b-2 border-blue-950">
-            <th class="px-6 py-4 sticky left-0 z-10 bg-blue-950 text-left w-48 sticky-col">Student</th>
-        `;
-        sortedTests.forEach(testKey => {
-          const formattedName = testKey.replace(/_/g, ' ');
-          theadHTML += `<th class="px-4 py-4 min-w-[140px] whitespace-nowrap">${formattedName}</th>`;
-        });
-        theadHTML += `</tr>`;
-
-        // 2. Build the Table Body
-        let tbodyHTML = '';
-        students.forEach(student => {
-          let rowHTML = `<tr class="hover:bg-slate-100 transition-colors border-b border-gray-200 bg-white">
-            <td class="px-6 py-4 font-bold text-gray-800 sticky left-0 z-10 bg-white sticky-col truncate">${student.data.name}</td>`;
-          
-          sortedTests.forEach(testKey => {
-            const isChecked = student.data[testKey] ? "checked" : "";
-            rowHTML += `
-              <td class="px-4 py-4 text-center">
-                <label class="relative inline-flex items-center cursor-pointer">
-                  <input type="checkbox" class="sr-only peer" ${isChecked} data-id="${student.id}" data-field="${testKey}">
-                  <div class="w-9 h-5 bg-gray-300 rounded-full peer peer-focus:ring-2 peer-focus:ring-blue-300 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600"></div>
-                </label>
-              </td>
-            `;
-          });
-          rowHTML += `</tr>`;
-          tbodyHTML += rowHTML;
-        });
-
-        // 3. Assemble the full Matrix
-        const matrixHTML = `
-          <div class="overflow-x-auto bg-white rounded-xl shadow-sm border border-gray-300">
-            <table class="w-full text-sm text-left">
-              <thead>${theadHTML}</thead>
-              <tbody>${tbodyHTML}</tbody>
-            </table>
-          </div>
-        `;
-
-        dashboard.innerHTML = matrixHTML;
-
-        // 4. Attach event listeners to all newly created toggles
-        const checkboxes = dashboard.querySelectorAll('input[type="checkbox"]');
-        checkboxes.forEach(box => {
-          box.addEventListener('change', async (e) => {
-            const docId = e.target.getAttribute('data-id');
-            const fieldName = e.target.getAttribute('data-field');
-            const newValue = e.target.checked;
-            
-            try {
-              await updateDoc(doc(db, "students", docId), { [fieldName]: newValue });
-            } catch (error) {
-              alert("Failed to save progress.");
-              e.target.checked = !newValue; 
-            }
-          });
-        });
-
-      } catch (error) {
-        document.getElementById('loading').innerText = "Failed to load database. Check console.";
-        console.error("Firebase Error: ", error);
-      }
+      dashboard.innerHTML = html + `</tbody></table>`;
     }
 
-    // --- ADMIN FUNCTIONS ---
-
-    document.getElementById('addStudentBtn').addEventListener('click', async () => {
-      const input = document.getElementById('newStudentName');
-      const name = input.value.trim();
-      if (!name) return alert("Please enter a name.");
-
-      const btn = document.getElementById('addStudentBtn');
-      btn.innerText = "Adding...";
-      
-      try {
-        let newStudentData = { name: name };
-        activeTests.forEach(test => newStudentData[test] = false);
-
-        await addDoc(collection(db, "students"), newStudentData);
-        input.value = '';
-        initDashboard(); 
-      } catch (error) {
-        alert("Failed to add student.");
-      }
-      btn.innerText = "Add";
-    });
-
-    document.getElementById('addTestBtn').addEventListener('click', async () => {
-      const input = document.getElementById('newTestName');
-      const rawName = input.value.trim();
-      if (!rawName) return alert("Please enter a test name.");
-
-      const safeTestName = rawName.replace(/[\/ ]/g, '_').toUpperCase();
-
-      const btn = document.getElementById('addTestBtn');
-      btn.innerText = "Adding...";
-
-      try {
-        const snapshot = await getDocs(collection(db, "students"));
-        const updatePromises = [];
-        
-        snapshot.forEach((document) => {
-          const studentRef = doc(db, "students", document.id);
-          updatePromises.push(updateDoc(studentRef, { [safeTestName]: false }));
+    // Helper functions for the buttons
+    window.deleteStudent = async (id) => { if(confirm('Delete student?')) await deleteDoc(doc(db, 'students', id)); initDashboard(); };
+    window.deleteTest = async (test) => { 
+        if(!confirm('Delete this test for everyone?')) return;
+        const snaps = await getDocs(collection(db, 'students'));
+        snaps.forEach(async (d) => {
+            const data = d.data();
+            delete data[test];
+            await updateDoc(doc(db, 'students', d.id), data);
         });
+        initDashboard();
+    };
+    window.updateToggle = async (id, field, val) => await updateDoc(doc(db, 'students', id), {[field]: val});
 
-        await Promise.all(updatePromises);
-        input.value = '';
-        initDashboard(); 
-      } catch (error) {
-        alert("Failed to add test.");
-        console.error(error);
-      }
-      btn.innerText = "Add";
-    });
-
-    // Start the app
     initDashboard();
   </script>
 </body>
