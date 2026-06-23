@@ -5,19 +5,14 @@
   <title>WAQTC Matrix</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
-    /* Custom grid pattern for the header */
     .bg-grid-pattern {
       background-color: #0c366e;
       background-image: radial-gradient(rgba(255, 255, 255, 0.1) 1px, transparent 1px);
       background-size: 20px 20px;
     }
-    /* Smooth transition for the glowing toggles */
-    .toggle-glow:checked + .toggle-bg {
-      box-shadow: 0 0 12px rgba(34, 197, 94, 0.6);
-    }
   </style>
 </head>
-<body class="bg-[#f8f9fa] font-sans">
+<body class="bg-gray-50 font-sans">
 
   <header class="bg-grid-pattern text-white pt-10 pb-20 px-8">
     <div class="max-w-7xl mx-auto flex justify-between items-start">
@@ -37,19 +32,18 @@
   <main class="px-6 -mt-12">
     <section class="max-w-7xl mx-auto bg-white rounded-xl shadow-[0_2px_15px_-3px_rgba(0,0,0,0.07),0_10px_20px_-2px_rgba(0,0,0,0.04)] border border-gray-100 p-8 mb-10">
       <h2 class="text-xs font-black text-gray-400 uppercase tracking-widest mb-6">Class Leaderboard</h2>
-      <div id="leaderboardContent" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-        </div>
+      <div id="leaderboardContent" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5"></div>
     </section>
 
     <div id="adminPanel" class="hidden max-w-7xl mx-auto bg-red-50 p-6 rounded-lg mb-10 border border-red-200">
       <h2 class="text-lg font-bold text-red-800 mb-4 uppercase text-xs tracking-widest">Admin Controls</h2>
       <div class="grid md:grid-cols-2 gap-4">
         <div class="flex gap-2">
-          <input type="text" id="newStudentName" placeholder="Student Name" class="border p-2 rounded w-full focus:outline-none focus:ring-2 focus:ring-blue-500">
+          <input type="text" id="newStudentName" placeholder="Student Name" class="border p-2 rounded w-full">
           <button id="addStudentBtn" class="bg-blue-600 text-white px-6 py-2 rounded font-bold text-sm uppercase tracking-wide">Add Student</button>
         </div>
         <div class="flex gap-2">
-          <input type="text" id="newTestName" placeholder="New Test Name" class="border p-2 rounded w-full focus:outline-none focus:ring-2 focus:ring-green-500">
+          <input type="text" id="newTestName" placeholder="New Test Name" class="border p-2 rounded w-full">
           <button id="addTestBtn" class="bg-green-600 text-white px-6 py-2 rounded font-bold text-sm uppercase tracking-wide">Add Test</button>
         </div>
       </div>
@@ -57,15 +51,14 @@
 
     <div class="max-w-7xl mx-auto">
       <h2 class="text-xs font-black text-gray-500 uppercase tracking-widest mb-4">Certification Matrix</h2>
-      <div id="dashboard" class="bg-white shadow-sm rounded-lg overflow-x-auto border border-gray-200">
+      <div id="dashboard" class="bg-white shadow-sm rounded-lg overflow-x-auto border border-gray-200 mb-6">
         <p class="p-10 text-center text-gray-400 italic">Connecting to secure database...</p>
+      </div>
+      <div class="text-center text-gray-500 text-sm mb-12">
+        WAQTC Resources: <a href="https://www.waqtc.org/technician-resources/" target="_blank" class="text-blue-600 hover:underline">waqtc.org/technician-resources</a>
       </div>
     </div>
   </main>
-
-  <footer class="py-12 text-center text-gray-400 text-xs uppercase tracking-tighter">
-    CE 210 Materials Lab · WAQTC Certification System
-  </footer>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
@@ -109,7 +102,6 @@
         const totalPossible = tests.size;
         let sortedLeaders = students.sort((a,b) => b.count - a.count || a.name.localeCompare(b.name));
 
-        // Leaderboard Cards with correct Tints and Gradient
         lbContent.innerHTML = sortedLeaders.slice(0, 10).map((s, i) => {
           let pct = totalPossible > 0 ? Math.round((s.count/totalPossible)*100) : 0;
           let rank = i + 1;
@@ -132,18 +124,21 @@
         }).join('');
 
         let sortedTests = Array.from(tests).sort();
-        let html = `<table class="w-full text-sm border-collapse"><thead><tr class="bg-[#1a3a5f] text-white">
+        let html = `<table class="w-full text-sm border-collapse border-0"><thead><tr class="bg-[#1a3a5f] text-white">
           <th class="p-4 text-left whitespace-nowrap sticky left-0 z-20 bg-[#1a3a5f] border-r border-white/10 shadow-[4px_0_10px_rgba(0,0,0,0.15)] uppercase text-[10px] tracking-widest font-black">Student</th>` + 
-          sortedTests.map(t => `<th class="p-4 border-l border-white/5 whitespace-nowrap uppercase text-[10px] tracking-widest font-black">${t.replace(/_/g,' ')} ${isAdmin ? `<button onclick="window.deleteTest('${t}')" class="text-red-400 ml-2 hover:text-white">×</button>`:''}</th>`).join('') +
+          sortedTests.map(t => `<th class="p-4 whitespace-nowrap uppercase text-[10px] tracking-widest font-black">
+            <a href="https://www.waqtc.org/technician-resources/" target="_blank" class="hover:underline text-blue-300">${t.replace(/_/g,' ')}</a> 
+            ${isAdmin ? `<button onclick="window.deleteTest('${t}')" class="text-red-400 ml-2 hover:text-white">×</button>`:''}
+          </th>`).join('') +
           `</tr></thead><tbody>`;
 
         students.sort((a,b) => a.name.localeCompare(b.name)).forEach(s => {
           html += `<tr class="border-b border-gray-100 hover:bg-gray-50 transition-colors">
             <td class="p-4 font-bold text-gray-700 sticky left-0 z-10 bg-white border-r border-gray-100 shadow-[4px_0_10px_rgba(0,0,0,0.03)] whitespace-nowrap">${isAdmin ? `<button onclick="window.deleteStudent('${s.id}')" class="text-red-500 mr-3">×</button>`:''}${s.name}</td>` +
-            sortedTests.map(t => `<td class="p-4 text-center border-l border-gray-50">
+            sortedTests.map(t => `<td class="p-4 text-center">
               <label class="relative inline-flex items-center cursor-pointer">
                 <input type="checkbox" class="sr-only peer toggle-glow" ${s[t] ? 'checked' : ''} onchange="window.updateToggle('${s.id}', '${t}', this.checked)">
-                <div class="w-11 h-6 bg-gray-200 rounded-full peer peer-checked:bg-green-500 transition-all after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-full toggle-bg"></div>
+                <div class="w-11 h-6 bg-gray-200 rounded-full peer peer-checked:bg-green-500 peer-checked:shadow-[0_0_10px_rgba(34,197,94,0.7)] after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-full toggle-bg"></div>
               </label>
             </td>`).join('') + `</tr>`;
         });
@@ -152,7 +147,7 @@
     }
 
     window.updateToggle = async (id, field, val) => { await updateDoc(doc(db, 'students', id), {[field]: val}); renderTable(); };
-    window.deleteStudent = async (id) => { if(confirm('Delete this student permanentely?')) await deleteDoc(doc(db, 'students', id)); renderTable(); };
+    window.deleteStudent = async (id) => { if(confirm('Delete student?')) await deleteDoc(doc(db, 'students', id)); renderTable(); };
     window.deleteTest = async (test) => {
       if(!confirm('This will delete the entire column for ALL students. Proceed?')) return;
       const snaps = await getDocs(collection(db, "students"));
@@ -165,12 +160,8 @@
       const name = document.getElementById('newStudentName').value.trim();
       if(!name) return;
       let data = { name };
-      // Assign existing tests to new student
       document.querySelectorAll('th').forEach(th => {
-        if(th.innerText.includes('×')) {
-           const cleanName = th.innerText.replace(' ×', '').replace(/ /g, '_');
-           data[cleanName] = false;
-        }
+        if(th.innerText.includes('×')) data[th.innerText.replace(' ×', '').replace(/ /g, '_')] = false;
       });
       await addDoc(collection(db, "students"), data);
       document.getElementById('newStudentName').value = '';
