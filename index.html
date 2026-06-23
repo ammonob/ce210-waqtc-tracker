@@ -14,7 +14,7 @@
 
     <div id="leaderboard" class="mb-8">
       <h2 class="text-lg font-bold text-gray-800 mb-4">Class Leaderboard</h2>
-      <div id="leaderboardContent" class="grid gap-3"></div>
+      <div id="leaderboardContent" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
     </div>
 
     <div id="adminPanel" class="hidden bg-red-50 p-6 rounded-lg mb-8 border border-red-200">
@@ -52,7 +52,6 @@
     const db = getFirestore(initializeApp(firebaseConfig));
     let isAdmin = false;
 
-    // Password Prompt
     document.getElementById('adminLoginBtn').onclick = () => {
       const pass = prompt("Enter Password:");
       if (pass === "WAQTC2026") {
@@ -77,23 +76,28 @@
         });
 
         const totalPossible = tests.size;
-        let sortedLeaders = students.sort((a,b) => b.count - a.count);
+        // Sort: Count DESC, then Name ASC for tie-breaking
+        let sortedLeaders = students.sort((a,b) => b.count - a.count || a.name.localeCompare(b.name));
 
-        // Leaderboard
-        lbContent.innerHTML = sortedLeaders.map((s, i) => {
+        // Leaderboard - Top 10
+        lbContent.innerHTML = sortedLeaders.slice(0, 10).map((s, i) => {
           let pct = totalPossible > 0 ? Math.round((s.count/totalPossible)*100) : 0;
           let rank = i + 1;
-          let tint = rank === 1 ? 'bg-yellow-100' : rank === 2 ? 'bg-gray-200' : rank === 3 ? 'bg-orange-100' : 'bg-white';
+          let tint = rank === 1 ? 'bg-yellow-50' : rank === 2 ? 'bg-blue-50' : rank === 3 ? 'bg-orange-50' : 'bg-white';
           let icon = rank === 1 ? '🏆' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : `#${rank}`;
           
           return `
-            <div class="${tint} p-3 rounded-lg flex items-center gap-4 shadow-sm border border-gray-100">
-              <span class="font-bold w-8 text-center">${icon}</span>
-              <span class="font-medium flex-1">${s.name}</span>
-              <div class="w-48 bg-gray-200 rounded-full h-3 overflow-hidden">
-                <div class="bg-green-500 h-full" style="width: ${pct}%"></div>
+            <div class="${tint} p-4 rounded-lg shadow-sm border border-gray-100">
+              <div class="flex justify-between items-center mb-2">
+                <div class="flex items-center gap-2">
+                  <span class="font-bold text-lg">${icon}</span>
+                  <span class="font-bold text-gray-800">${s.name}</span>
+                </div>
+                <span class="font-bold text-blue-600">${pct}%</span>
               </div>
-              <span class="font-bold text-blue-600 w-12 text-right">${pct}%</span>
+              <div class="w-full bg-gray-200 rounded-full h-2.5">
+                <div class="bg-blue-500 h-2.5 rounded-full" style="width: ${pct}%"></div>
+              </div>
             </div>`;
         }).join('');
 
@@ -109,7 +113,7 @@
             sortedTests.map(t => `<td class="p-3 text-center border-l">
               <label class="relative inline-flex items-center cursor-pointer">
                 <input type="checkbox" class="sr-only peer" ${s[t] ? 'checked' : ''} onchange="window.updateToggle('${s.id}', '${t}', this.checked)">
-                <div class="w-11 h-6 bg-gray-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-500"></div>
+                <div class="w-11 h-6 bg-gray-300 rounded-full peer peer-checked:bg-green-500 peer-checked:shadow-[0_0_10px_rgba(34,197,94,0.7)] after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-full"></div>
               </label>
             </td>`).join('') + `</tr>`;
         });
@@ -117,12 +121,19 @@
       } catch(e) { console.error(e); }
     }
 
-    // Admin Action Handlers
+    window.updateToggle = async (id, field, val) => { await updateDoc(doc(db, 'students', id), {[field]: val}); renderTable(); };
+    window.deleteStudent = async (id) => { if(confirm('Delete student?')) await deleteDoc(doc(db, 'students', id)); renderTable(); };
+    window.deleteTest = async (test) => {
+      if(!confirm('Delete this test for everyone?')) return;
+      const snaps = await getDocs(collection(db, 'students'));
+      for (const d of snaps.docs) { let dta = d.data(); delete dta[test]; await updateDoc(d.ref, dta); }
+      renderTable();
+    };
+
     document.getElementById('addStudentBtn').onclick = async () => {
       const name = document.getElementById('newStudentName').value.trim();
       if(!name) return;
       let data = { name };
-      // Assign all existing tests as false for new student
       document.querySelectorAll('th').forEach(th => {
         if(th.innerText.includes('×')) data[th.innerText.replace(' ×', '').replace(/ /g, '_')] = false;
       });
@@ -139,15 +150,6 @@
       const updates = snaps.docs.map(d => updateDoc(d.ref, {[field]: false}));
       await Promise.all(updates);
       document.getElementById('newTestName').value = '';
-      renderTable();
-    };
-
-    window.updateToggle = async (id, field, val) => { await updateDoc(doc(db, 'students', id), {[field]: val}); renderTable(); };
-    window.deleteStudent = async (id) => { if(confirm('Delete student?')) await deleteDoc(doc(db, 'students', id)); renderTable(); };
-    window.deleteTest = async (test) => {
-      if(!confirm('Delete this test for everyone?')) return;
-      const snaps = await getDocs(collection(db, 'students'));
-      for (const d of snaps.docs) { let dta = d.data(); delete dta[test]; await updateDoc(d.ref, dta); }
       renderTable();
     };
 
