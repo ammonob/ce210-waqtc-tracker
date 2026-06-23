@@ -38,7 +38,7 @@
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-    import { getFirestore, collection, getDocs, doc, updateDoc, addDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+    import { getFirestore, collection, getDocs, doc, updateDoc, addDoc, deleteDoc, deleteField } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyC0tR3hpuQpTHTEObm21azoQKq9Qbm4LP0",
@@ -76,10 +76,8 @@
         });
 
         const totalPossible = tests.size;
-        // Sort: Count DESC, then Name ASC for tie-breaking
         let sortedLeaders = students.sort((a,b) => b.count - a.count || a.name.localeCompare(b.name));
 
-        // Leaderboard - Top 10
         lbContent.innerHTML = sortedLeaders.slice(0, 10).map((s, i) => {
           let pct = totalPossible > 0 ? Math.round((s.count/totalPossible)*100) : 0;
           let rank = i + 1;
@@ -101,7 +99,6 @@
             </div>`;
         }).join('');
 
-        // Matrix
         let sortedTests = Array.from(tests).sort();
         let html = `<table class="w-full text-sm"><thead><tr class="bg-blue-900 text-white">
           <th class="p-3 text-left whitespace-nowrap">Student</th>` + 
@@ -123,10 +120,13 @@
 
     window.updateToggle = async (id, field, val) => { await updateDoc(doc(db, 'students', id), {[field]: val}); renderTable(); };
     window.deleteStudent = async (id) => { if(confirm('Delete student?')) await deleteDoc(doc(db, 'students', id)); renderTable(); };
+    
+    // FIXED DELETE TEST FUNCTION
     window.deleteTest = async (test) => {
-      if(!confirm('Delete this test for everyone?')) return;
-      const snaps = await getDocs(collection(db, 'students'));
-      for (const d of snaps.docs) { let dta = d.data(); delete dta[test]; await updateDoc(d.ref, dta); }
+      if(!confirm('Delete this test column for everyone?')) return;
+      const snaps = await getDocs(collection(db, "students"));
+      const updates = snaps.docs.map(d => updateDoc(d.ref, { [test]: deleteField() }));
+      await Promise.all(updates);
       renderTable();
     };
 
