@@ -31,7 +31,7 @@
 
   <main class="px-6 -mt-12">
     <section class="max-w-7xl mx-auto bg-white rounded-xl shadow-[0_2px_15px_-3px_rgba(0,0,0,0.07),0_10px_20px_-2px_rgba(0,0,0,0.04)] border border-gray-100 p-8 mb-10">
-      <h2 class="text-xs text-gray-500 uppercase tracking-widest mb-6">Class Leaderboard</h2>
+      <h2 class="text-xs font-bold text-gray-800 uppercase tracking-widest mb-6">Class Leaderboard</h2>
       <div id="leaderboardContent" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5"></div>
     </section>
 
@@ -50,7 +50,7 @@
     </div>
 
     <div class="max-w-7xl mx-auto">
-      <h2 class="text-xs text-gray-500 uppercase tracking-widest mb-4">Certification Checklist</h2>
+      <h2 class="text-xs font-bold text-gray-800 uppercase tracking-widest mb-4">Certification Checklist</h2>
       
       <div id="dashboard" class="bg-white shadow-sm rounded-lg overflow-x-auto border border-gray-200 mb-6">
         <p class="p-10 text-center text-gray-400 italic">Connecting to secure database...</p>
@@ -114,9 +114,9 @@
               <div class="flex justify-between items-center mb-3">
                 <div class="flex items-center gap-3">
                   <span class="text-xl">${icon}</span>
-                  <span class="text-gray-800 text-sm tracking-tight">${s.name}</span>
+                  <span class="font-bold text-gray-800 text-sm tracking-tight">${s.name}</span>
                 </div>
-                <span class="text-blue-600 text-sm">${pct}%</span>
+                <span class="font-bold text-blue-600 text-sm">${pct}%</span>
               </div>
               <div class="w-full bg-gray-100 rounded-full h-2.5">
                 <div class="bg-gradient-to-r from-blue-600 to-green-400 h-2.5 rounded-full shadow-[0_0_8px_rgba(59,130,246,0.3)]" style="width: ${pct}%"></div>
@@ -125,62 +125,12 @@
         }).join('');
 
         let sortedTests = Array.from(tests).sort();
-        // Set header to not bold (font-normal)
-        let html = `<table class="w-full text-sm border-collapse border-0"><thead><tr class="bg-[#1a3a5f] text-white font-normal">
-          <th class="p-4 text-left whitespace-nowrap sticky left-0 z-20 bg-[#1a3a5f] border-r border-white/10 shadow-[4px_0_10px_rgba(0,0,0,0.15)] text-[10px] tracking-widest font-normal">Student</th>` + 
-          sortedTests.map(t => `<th class="p-4 whitespace-nowrap text-[10px] tracking-widest font-normal">
+        // Set header to bold
+        let html = `<table class="w-full text-sm border-collapse border-0"><thead><tr class="bg-[#1a3a5f] text-white">
+          <th class="p-4 text-left whitespace-nowrap sticky left-0 z-20 bg-[#1a3a5f] border-r border-white/10 shadow-[4px_0_10px_rgba(0,0,0,0.15)] text-[10px] tracking-widest font-bold">Student</th>` + 
+          sortedTests.map(t => `<th class="p-4 whitespace-nowrap text-[10px] tracking-widest font-bold">
             <a href="https://www.waqtc.org/technician-resources/" target="_blank" class="hover:underline text-white">${t.replace(/_/g,' ')}</a> 
             ${isAdmin ? `<button onclick="window.deleteTest('${t}')" class="text-red-400 ml-2 hover:text-white">×</button>`:''}</th>`).join('') +
           `</tr></thead><tbody>`;
 
-        students.sort((a,b) => a.name.localeCompare(b.name)).forEach(s => {
-          html += `<tr class="border-b border-gray-100 hover:bg-gray-50 transition-colors">
-            <td class="p-4 text-gray-700 sticky left-0 z-10 bg-white border-r border-gray-100 shadow-[4px_0_10px_rgba(0,0,0,0.03)] whitespace-nowrap">${isAdmin ? `<button onclick="window.deleteStudent('${s.id}')" class="text-red-500 mr-3">×</button>`:''}${s.name}</td>` +
-            sortedTests.map(t => `<td class="p-4 text-center">
-              <label class="relative inline-flex items-center cursor-pointer">
-                <input type="checkbox" class="sr-only peer toggle-glow" ${s[t] ? 'checked' : ''} onchange="window.updateToggle('${s.id}', '${t}', this.checked)">
-                <div class="w-11 h-6 bg-gray-200 rounded-full peer peer-checked:bg-green-500 peer-checked:shadow-[0_0_10px_rgba(34,197,94,0.7)] after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-full toggle-bg"></div>
-              </label>
-            </td>`).join('') + `</tr>`;
-        });
-        dashboard.innerHTML = html + `</tbody></table>`;
-      } catch(e) { console.error(e); }
-    }
-
-    window.updateToggle = async (id, field, val) => { await updateDoc(doc(db, 'students', id), {[field]: val}); renderTable(); };
-    window.deleteStudent = async (id) => { if(confirm('Delete student?')) await deleteDoc(doc(db, 'students', id)); renderTable(); };
-    window.deleteTest = async (test) => {
-      if(!confirm('This will delete the entire column for ALL students. Proceed?')) return;
-      const snaps = await getDocs(collection(db, "students"));
-      const updates = snaps.docs.map(d => updateDoc(d.ref, { [test]: deleteField() }));
-      await Promise.all(updates);
-      renderTable();
-    };
-
-    document.getElementById('addStudentBtn').onclick = async () => {
-      const name = document.getElementById('newStudentName').value.trim();
-      if(!name) return;
-      let data = { name };
-      document.querySelectorAll('th').forEach(th => {
-        if(th.innerText.includes('×')) data[th.innerText.replace(' ×', '').replace(/ /g, '_')] = false;
-      });
-      await addDoc(collection(db, "students"), data);
-      document.getElementById('newStudentName').value = '';
-      renderTable();
-    };
-
-    document.getElementById('addTestBtn').onclick = async () => {
-      const name = document.getElementById('newTestName').value.trim();
-      if(!name) return;
-      const field = name.replace(/[\/ ]/g, '_').toUpperCase();
-      const snaps = await getDocs(collection(db, "students"));
-      const updates = snaps.docs.map(d => updateDoc(d.ref, {[field]: false}));
-      await Promise.all(updates);
-      document.getElementById('newTestName').value = '';
-      renderTable();
-    };
-
-    renderTable();
-  </script>
-</body>
-</html>
+        students.sort((a,b) => a.
