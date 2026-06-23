@@ -12,13 +12,16 @@
       <button id="adminLoginBtn" class="bg-gray-800 text-white px-4 py-2 rounded">Admin Access</button>
     </div>
 
+    <div id="leaderboard" class="bg-white p-4 rounded-lg shadow mb-6 border border-blue-200">
+      <h2 class="text-sm font-bold text-blue-900 uppercase tracking-widest mb-2">Top Performers</h2>
+      <div id="leaderboardContent" class="flex gap-4"></div>
+    </div>
+
     <div id="adminPanel" class="hidden bg-red-50 p-6 rounded-lg mb-6 border border-red-200">
       <h2 class="text-lg font-bold text-red-800 mb-4">Admin Controls</h2>
       <div class="flex gap-4">
         <input type="text" id="newStudentName" placeholder="Student Name" class="border p-2 rounded">
         <button id="addStudentBtn" class="bg-blue-600 text-white px-4 py-2 rounded">Add Student</button>
-        <input type="text" id="newTestName" placeholder="New Test Name" class="border p-2 rounded">
-        <button id="addTestBtn" class="bg-green-600 text-white px-4 py-2 rounded">Add Test</button>
       </div>
     </div>
 
@@ -54,38 +57,48 @@
 
     async function renderTable() {
       const dashboard = document.getElementById('dashboard');
+      const lbContent = document.getElementById('leaderboardContent');
       try {
         const snap = await getDocs(collection(db, "students"));
         let students = [], tests = new Set();
-        snap.forEach(d => { students.push({id: d.id, ...d.data()}); Object.keys(d.data()).forEach(k => k !== 'name' && tests.add(k)); });
         
+        snap.forEach(d => { 
+          let data = d.data();
+          let count = Object.values(data).filter(v => v === true).length;
+          students.push({id: d.id, count, ...data}); 
+          Object.keys(data).forEach(k => k !== 'name' && tests.add(k)); 
+        });
+
+        // --- Leaderboard Calculation ---
+        let sortedLeaders = students.sort((a,b) => b.count - a.count);
+        lbContent.innerHTML = sortedLeaders.slice(0, 3).map((s, i) => {
+          let icons = ["🏆", "🥈", "🥉"];
+          let colors = ["text-yellow-500", "text-gray-400", "text-amber-700"];
+          return s.count > 0 ? `<div class="${colors[i]} font-bold">${icons[i]} ${s.name} (${s.count})</div>` : '';
+        }).join('') || "No certifications yet!";
+
+        // --- Matrix Rendering ---
         let sortedTests = Array.from(tests).sort();
         let html = `<table class="w-full text-sm"><thead><tr class="bg-blue-900 text-white">
-          <th class="p-3 text-left">Student</th>` + 
-          sortedTests.map(t => `<th class="p-2 border-l border-blue-800">${t.replace(/_/g,' ')} ${isAdmin ? `<button onclick="deleteTest('${t}')" class="text-red-300">×</button>`:''}</th>`).join('') +
+          <th class="p-3 text-left whitespace-nowrap">Student</th>` + 
+          sortedTests.map(t => `<th class="p-3 border-l border-blue-800 whitespace-nowrap">${t.replace(/_/g,' ')}</th>`).join('') +
           `</tr></thead><tbody>`;
 
         students.sort((a,b) => a.name.localeCompare(b.name)).forEach(s => {
-          html += `<tr class="border-b">
-            <td class="p-3 font-medium">${isAdmin ? `<button onclick="deleteStudent('${s.id}')" class="text-red-500 mr-2">×</button>`:''}${s.name}</td>` +
-            sortedTests.map(t => `
-              <td class="p-2 text-center border-l">
-                <label class="relative inline-flex items-center cursor-pointer">
-                  <input type="checkbox" class="sr-only peer" ${s[t] ? 'checked' : ''} onchange="updateToggle('${s.id}', '${t}', this.checked)">
-                  <div class="w-9 h-5 bg-gray-200 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600"></div>
-                </label>
-              </td>`).join('') +
-            `</tr>`;
+          html += `<tr class="border-b"><td class="p-3 font-medium">${s.name}</td>` +
+            sortedTests.map(t => `<td class="p-3 text-center border-l">
+              <label class="cursor-pointer">
+                <input type="checkbox" class="hidden peer" ${s[t] ? 'checked' : ''} onchange="updateToggle('${s.id}', '${t}', this.checked)">
+                <div class="w-9 h-5 bg-gray-200 rounded-full peer-checked:bg-blue-600 transition-all after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 peer-checked:after:translate-x-full"></div>
+              </label>
+            </td>`).join('') + `</tr>`;
         });
         dashboard.innerHTML = html + `</tbody></table>`;
-      } catch(e) { console.error(e); dashboard.innerHTML = "<p class='p-10 text-red-500'>Error loading data.</p>"; }
+      } catch(e) { console.error(e); }
     }
 
-    window.updateToggle = async (id, field, val) => await updateDoc(doc(db, 'students', id), {[field]: val});
-    window.deleteStudent = async (id) => { await deleteDoc(doc(db, 'students', id)); renderTable(); };
-    window.deleteTest = async (test) => {
-      const snaps = await getDocs(collection(db, 'students'));
-      for (const d of snaps.docs) { let dta = d.data(); delete dta[test]; await updateDoc(d.ref, dta); }
+    window.updateToggle = async (id, field, val) => {
+      await updateDoc(doc(db, 'students', id), {[field]: val});
       renderTable();
     };
 
