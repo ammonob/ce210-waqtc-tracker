@@ -50,9 +50,9 @@
     </div>
 
     <div class="max-w-7xl mx-auto">
-      <h2 class="bg-[#1a3a5f] text-white p-4 rounded-t-lg text-sm tracking-wide shadow-sm">Certification Checklist</h2>
+      <h2 class="text-xs text-gray-500 uppercase tracking-widest mb-4">Certification Checklist</h2>
       
-      <div id="dashboard" class="bg-white shadow-sm rounded-b-lg overflow-x-auto border border-gray-200 mb-6">
+      <div id="dashboard" class="bg-white shadow-sm rounded-lg overflow-x-auto border border-gray-200 mb-6">
         <p class="p-10 text-center text-gray-400 italic">Connecting to secure database...</p>
       </div>
       <div class="text-center text-gray-500 text-sm mb-12">
@@ -110,7 +110,7 @@
           let icon = rank === 1 ? '🏆' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : `<span class="text-gray-300 text-xs">#${rank}</span>`;
           
           return `
-            <div class="${tint} p-5 rounded-lg border shadow-sm transition-transform">
+            <div class="${tint} p-5 rounded-lg border shadow-sm transition-transform hover:scale-[1.02]">
               <div class="flex justify-between items-center mb-3">
                 <div class="flex items-center gap-3">
                   <span class="text-xl">${icon}</span>
@@ -125,10 +125,11 @@
         }).join('');
 
         let sortedTests = Array.from(tests).sort();
-        let html = `<table class="w-full text-sm border-collapse border-0"><thead><tr class="bg-[#1a3a5f] text-white">
-          <th class="p-4 text-left whitespace-nowrap sticky left-0 z-20 bg-[#1a3a5f] border-r border-white/10 shadow-[4px_0_10px_rgba(0,0,0,0.15)] text-[10px] tracking-widest">Student</th>` + 
+        // Set header to not bold (font-normal)
+        let html = `<table class="w-full text-sm border-collapse border-0"><thead><tr class="bg-[#1a3a5f] text-white font-normal">
+          <th class="p-4 text-left whitespace-nowrap sticky left-0 z-20 bg-[#1a3a5f] border-r border-white/10 shadow-[4px_0_10px_rgba(0,0,0,0.15)] text-[10px] tracking-widest font-normal">Student</th>` + 
           sortedTests.map(t => `<th class="p-4 whitespace-nowrap text-[10px] tracking-widest font-normal">
-            <a href="https://www.waqtc.org/technician-resources/" target="_blank" class="hover:underline text-blue-300">${t.replace(/_/g,' ')}</a> 
+            <a href="https://www.waqtc.org/technician-resources/" target="_blank" class="hover:underline text-white">${t.replace(/_/g,' ')}</a> 
             ${isAdmin ? `<button onclick="window.deleteTest('${t}')" class="text-red-400 ml-2 hover:text-white">×</button>`:''}</th>`).join('') +
           `</tr></thead><tbody>`;
 
