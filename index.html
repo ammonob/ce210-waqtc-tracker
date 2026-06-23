@@ -100,13 +100,15 @@
         }).join('');
 
         let sortedTests = Array.from(tests).sort();
+        // Added sticky classes to header
         let html = `<table class="w-full text-sm"><thead><tr class="bg-blue-900 text-white">
-          <th class="p-3 text-left whitespace-nowrap">Student</th>` + 
+          <th class="p-3 text-left whitespace-nowrap sticky left-0 z-20 bg-blue-900 shadow-[2px_0_5px_rgba(0,0,0,0.1)]">Student</th>` + 
           sortedTests.map(t => `<th class="p-3 border-l border-blue-800 whitespace-nowrap">${t.replace(/_/g,' ')} ${isAdmin ? `<button onclick="window.deleteTest('${t}')" class="text-red-300 ml-2 hover:text-white">×</button>`:''}</th>`).join('') +
           `</tr></thead><tbody>`;
 
         students.sort((a,b) => a.name.localeCompare(b.name)).forEach(s => {
-          html += `<tr class="border-b"><td class="p-3 font-medium">${isAdmin ? `<button onclick="window.deleteStudent('${s.id}')" class="text-red-500 mr-2 font-bold">×</button>`:''}${s.name}</td>` +
+          // Added sticky classes to name cell
+          html += `<tr class="border-b"><td class="p-3 font-medium sticky left-0 z-10 bg-white shadow-[2px_0_5px_rgba(0,0,0,0.05)]">${isAdmin ? `<button onclick="window.deleteStudent('${s.id}')" class="text-red-500 mr-2 font-bold">×</button>`:''}${s.name}</td>` +
             sortedTests.map(t => `<td class="p-3 text-center border-l">
               <label class="relative inline-flex items-center cursor-pointer">
                 <input type="checkbox" class="sr-only peer" ${s[t] ? 'checked' : ''} onchange="window.updateToggle('${s.id}', '${t}', this.checked)">
@@ -120,8 +122,6 @@
 
     window.updateToggle = async (id, field, val) => { await updateDoc(doc(db, 'students', id), {[field]: val}); renderTable(); };
     window.deleteStudent = async (id) => { if(confirm('Delete student?')) await deleteDoc(doc(db, 'students', id)); renderTable(); };
-    
-    // FIXED DELETE TEST FUNCTION
     window.deleteTest = async (test) => {
       if(!confirm('Delete this test column for everyone?')) return;
       const snaps = await getDocs(collection(db, "students"));
