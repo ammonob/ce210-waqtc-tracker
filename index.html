@@ -8,24 +8,30 @@
 <body class="bg-gray-50 p-6">
   <div class="max-w-7xl mx-auto">
     <div class="flex justify-between items-center mb-6">
-      <h1 class="text-2xl font-bold text-blue-900">WAQTC Certification Matrix</h1>
-      <button id="adminLoginBtn" class="bg-gray-800 text-white px-4 py-2 rounded">Admin Access</button>
+      <h1 class="text-2xl font-bold text-gray-900">WAQTC Certification Matrix</h1>
+      <button id="adminLoginBtn" class="bg-gray-200 text-gray-700 px-4 py-2 rounded text-sm font-semibold">Admin Access</button>
     </div>
 
-    <div id="leaderboard" class="bg-white p-4 rounded-lg shadow mb-6 border border-blue-200">
-      <h2 class="text-sm font-bold text-blue-900 uppercase tracking-widest mb-2">Top Performers</h2>
-      <div id="leaderboardContent" class="flex gap-4"></div>
+    <div id="leaderboard" class="mb-8">
+      <h2 class="text-lg font-bold text-gray-800 mb-4">Class Leaderboard</h2>
+      <div id="leaderboardContent" class="grid gap-3"></div>
     </div>
 
-    <div id="adminPanel" class="hidden bg-red-50 p-6 rounded-lg mb-6 border border-red-200">
+    <div id="adminPanel" class="hidden bg-red-50 p-6 rounded-lg mb-8 border border-red-200">
       <h2 class="text-lg font-bold text-red-800 mb-4">Admin Controls</h2>
-      <div class="flex gap-4">
-        <input type="text" id="newStudentName" placeholder="Student Name" class="border p-2 rounded">
-        <button id="addStudentBtn" class="bg-blue-600 text-white px-4 py-2 rounded">Add Student</button>
+      <div class="grid md:grid-cols-2 gap-4">
+        <div class="flex gap-2">
+          <input type="text" id="newStudentName" placeholder="Student Name" class="border p-2 rounded w-full">
+          <button id="addStudentBtn" class="bg-blue-600 text-white px-4 py-2 rounded whitespace-nowrap">Add Student</button>
+        </div>
+        <div class="flex gap-2">
+          <input type="text" id="newTestName" placeholder="New Test Name" class="border p-2 rounded w-full">
+          <button id="addTestBtn" class="bg-green-600 text-white px-4 py-2 rounded whitespace-nowrap">Add Test</button>
+        </div>
       </div>
     </div>
 
-    <div id="dashboard" class="bg-white shadow rounded-lg overflow-x-auto">
+    <div id="dashboard" class="bg-white shadow rounded-lg overflow-x-auto border border-gray-200">
       <p class="p-10 text-center text-gray-500">Loading matrix...</p>
     </div>
   </div>
@@ -46,6 +52,7 @@
     const db = getFirestore(initializeApp(firebaseConfig));
     let isAdmin = false;
 
+    // Password Prompt
     document.getElementById('adminLoginBtn').onclick = () => {
       const pass = prompt("Enter Password:");
       if (pass === "WAQTC2026") {
@@ -69,27 +76,40 @@
           Object.keys(data).forEach(k => k !== 'name' && tests.add(k)); 
         });
 
-        // --- Leaderboard Calculation ---
+        const totalPossible = tests.size;
         let sortedLeaders = students.sort((a,b) => b.count - a.count);
-        lbContent.innerHTML = sortedLeaders.slice(0, 3).map((s, i) => {
-          let icons = ["🏆", "🥈", "🥉"];
-          let colors = ["text-yellow-500", "text-gray-400", "text-amber-700"];
-          return s.count > 0 ? `<div class="${colors[i]} font-bold">${icons[i]} ${s.name} (${s.count})</div>` : '';
-        }).join('') || "No certifications yet!";
 
-        // --- Matrix Rendering ---
+        // Leaderboard
+        lbContent.innerHTML = sortedLeaders.map((s, i) => {
+          let pct = totalPossible > 0 ? Math.round((s.count/totalPossible)*100) : 0;
+          let rank = i + 1;
+          let tint = rank === 1 ? 'bg-yellow-100' : rank === 2 ? 'bg-gray-200' : rank === 3 ? 'bg-orange-100' : 'bg-white';
+          let icon = rank === 1 ? '🏆' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : `#${rank}`;
+          
+          return `
+            <div class="${tint} p-3 rounded-lg flex items-center gap-4 shadow-sm border border-gray-100">
+              <span class="font-bold w-8 text-center">${icon}</span>
+              <span class="font-medium flex-1">${s.name}</span>
+              <div class="w-48 bg-gray-200 rounded-full h-3 overflow-hidden">
+                <div class="bg-green-500 h-full" style="width: ${pct}%"></div>
+              </div>
+              <span class="font-bold text-blue-600 w-12 text-right">${pct}%</span>
+            </div>`;
+        }).join('');
+
+        // Matrix
         let sortedTests = Array.from(tests).sort();
         let html = `<table class="w-full text-sm"><thead><tr class="bg-blue-900 text-white">
           <th class="p-3 text-left whitespace-nowrap">Student</th>` + 
-          sortedTests.map(t => `<th class="p-3 border-l border-blue-800 whitespace-nowrap">${t.replace(/_/g,' ')}</th>`).join('') +
+          sortedTests.map(t => `<th class="p-3 border-l border-blue-800 whitespace-nowrap">${t.replace(/_/g,' ')} ${isAdmin ? `<button onclick="window.deleteTest('${t}')" class="text-red-300 ml-2 hover:text-white">×</button>`:''}</th>`).join('') +
           `</tr></thead><tbody>`;
 
         students.sort((a,b) => a.name.localeCompare(b.name)).forEach(s => {
-          html += `<tr class="border-b"><td class="p-3 font-medium">${s.name}</td>` +
+          html += `<tr class="border-b"><td class="p-3 font-medium">${isAdmin ? `<button onclick="window.deleteStudent('${s.id}')" class="text-red-500 mr-2 font-bold">×</button>`:''}${s.name}</td>` +
             sortedTests.map(t => `<td class="p-3 text-center border-l">
-              <label class="cursor-pointer">
-                <input type="checkbox" class="hidden peer" ${s[t] ? 'checked' : ''} onchange="updateToggle('${s.id}', '${t}', this.checked)">
-                <div class="w-9 h-5 bg-gray-200 rounded-full peer-checked:bg-blue-600 transition-all after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 peer-checked:after:translate-x-full"></div>
+              <label class="relative inline-flex items-center cursor-pointer">
+                <input type="checkbox" class="sr-only peer" ${s[t] ? 'checked' : ''} onchange="window.updateToggle('${s.id}', '${t}', this.checked)">
+                <div class="w-11 h-6 bg-gray-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-500"></div>
               </label>
             </td>`).join('') + `</tr>`;
         });
@@ -97,8 +117,37 @@
       } catch(e) { console.error(e); }
     }
 
-    window.updateToggle = async (id, field, val) => {
-      await updateDoc(doc(db, 'students', id), {[field]: val});
+    // Admin Action Handlers
+    document.getElementById('addStudentBtn').onclick = async () => {
+      const name = document.getElementById('newStudentName').value.trim();
+      if(!name) return;
+      let data = { name };
+      // Assign all existing tests as false for new student
+      document.querySelectorAll('th').forEach(th => {
+        if(th.innerText.includes('×')) data[th.innerText.replace(' ×', '').replace(/ /g, '_')] = false;
+      });
+      await addDoc(collection(db, "students"), data);
+      document.getElementById('newStudentName').value = '';
+      renderTable();
+    };
+
+    document.getElementById('addTestBtn').onclick = async () => {
+      const name = document.getElementById('newTestName').value.trim();
+      if(!name) return;
+      const field = name.replace(/[\/ ]/g, '_').toUpperCase();
+      const snaps = await getDocs(collection(db, "students"));
+      const updates = snaps.docs.map(d => updateDoc(d.ref, {[field]: false}));
+      await Promise.all(updates);
+      document.getElementById('newTestName').value = '';
+      renderTable();
+    };
+
+    window.updateToggle = async (id, field, val) => { await updateDoc(doc(db, 'students', id), {[field]: val}); renderTable(); };
+    window.deleteStudent = async (id) => { if(confirm('Delete student?')) await deleteDoc(doc(db, 'students', id)); renderTable(); };
+    window.deleteTest = async (test) => {
+      if(!confirm('Delete this test for everyone?')) return;
+      const snaps = await getDocs(collection(db, 'students'));
+      for (const d of snaps.docs) { let dta = d.data(); delete dta[test]; await updateDoc(d.ref, dta); }
       renderTable();
     };
 
