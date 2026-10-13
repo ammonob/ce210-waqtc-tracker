@@ -47,7 +47,7 @@
     <!-- Main Container -->
     <main class="max-w-7xl mx-auto px-6 py-8 space-y-8">
 
-        <!-- Class Leaderboard Section (Shows ~3.5 rows) -->
+        <!-- Class Leaderboard Section (Sorted by rank) -->
         <section class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
             <div class="flex justify-between items-center mb-4 border-b pb-2">
                 <h2 class="text-lg font-bold text-gray-800 uppercase tracking-wider">Class Leaderboard</h2>
@@ -59,7 +59,7 @@
             </div>
         </section>
 
-        <!-- Certification Checklist Section -->
+        <!-- Certification Checklist Section (Ordered by Excel sheet top-to-bottom) -->
         <section class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
             <h2 class="text-lg font-bold text-gray-800 uppercase tracking-wider mb-4 border-b pb-2">Certification Checklist</h2>
             <div id="certification-checklist">
@@ -75,7 +75,6 @@
 
     <!-- JavaScript Data Fetcher, UI Renderer & Loader Animator -->
     <script>
-        // Updated to point directly to your new published sheet CSV endpoint
         const BASE_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQtseO-b1lNH6L6ltARhp7fC-s4UNylDTRVkivnRYeH40yv2hvyCqZe3a2R0K9sy4BRRLMjh_R78NIK/pub?output=csv';
         let loadingInterval = null;
 
@@ -118,7 +117,8 @@
                 const totalTests = headers.length - 1;
                 const studentRows = rows.slice(1).filter(row => row && row[0] && row[0].trim() !== '');
 
-                let students = studentRows.map(row => {
+                // Keep students in the exact sheet order (top to bottom)
+                let sheetOrderStudents = studentRows.map(row => {
                     const name = row[0];
                     let completedCount = 0;
                     const tests = {};
@@ -134,11 +134,12 @@
                     return { name, completedCount, tests };
                 });
 
-                students.sort((a, b) => b.completedCount - a.completedCount);
+                // Create a sorted clone specifically for the leaderboard ranking
+                let leaderboardStudents = [...sheetOrderStudents].sort((a, b) => b.completedCount - a.completedCount);
 
                 stopLoadingAnimation();
-                renderLeaderboard(students, totalTests);
-                renderChecklist(headers.slice(1), students);
+                renderLeaderboard(leaderboardStudents, totalTests);
+                renderChecklist(headers.slice(1), sheetOrderStudents);
 
             } catch (error) {
                 console.error("Failed to load Google Sheet data:", error);
