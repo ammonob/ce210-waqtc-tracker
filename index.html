@@ -7,7 +7,6 @@
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        /* Custom scrollbar styling for clean look */
         ::-webkit-scrollbar {
             width: 6px;
             height: 6px;
@@ -48,19 +47,19 @@
     <!-- Main Container -->
     <main class="max-w-7xl mx-auto px-6 py-8 space-y-8">
 
-        <!-- Class Leaderboard Section (Shows exactly 3 rows) -->
+        <!-- Class Leaderboard Section (Shows ~3.5 rows) -->
         <section class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
             <div class="flex justify-between items-center mb-4 border-b pb-2">
                 <h2 class="text-lg font-bold text-gray-800 uppercase tracking-wider">Class Leaderboard</h2>
-                <span class="text-xs text-gray-500 font-medium italic">Scroll inside box to see full class</span>
+                <span class="text-xs text-gray-500 font-medium italic">Scroll down to view full class rankings</span>
             </div>
-            <!-- Fixed container height capped to 3 rows -->
-            <div id="class-leaderboard" class="max-h-[210px] overflow-y-auto pr-2">
+            <!-- Height set to show 3 full rows + preview of 4th -->
+            <div id="class-leaderboard" class="max-h-[235px] overflow-y-auto pr-2">
                 <div class="text-gray-500 text-sm italic py-4">Loading leaderboard rankings...</div>
             </div>
         </section>
 
-        <!-- Certification Checklist Section (Fixed sticky borders during scroll) -->
+        <!-- Certification Checklist Section -->
         <section class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
             <h2 class="text-lg font-bold text-gray-800 uppercase tracking-wider mb-4 border-b pb-2">Certification Checklist</h2>
             <div id="certification-checklist">
@@ -195,16 +194,20 @@
                                 `).join('')}
                             </tr>
                         </thead>
-                        <tbody class="bg-white">
-                            ${students.map((s, idx) => `
-                                <tr class="${idx % 2 === 0 ? 'bg-white' : 'bg-slate-50/60'} hover:bg-blue-50/40">
-                                    <td class="px-4 py-3 font-semibold text-gray-900 border-r-2 border-b border-gray-400 sticky left-0 ${idx % 2 === 0 ? 'bg-white' : 'bg-[#f8fafc]'} z-20 whitespace-nowrap shadow-sm">${s.name}</td>${testNames.map(test => `
-                                        <td class="px-2 py-3 text-center border-r border-b border-gray-200">
-                                            ${s.tests[test] ? '<span class="text-green-600 font-extrabold text-sm">✔</span>' : '<span class="text-gray-300 font-light">-</span>'}
-                                        </td>
-                                    `).join('')}
-                                </tr>
-                            `).join('')}
+                        <tbody>
+                            ${students.map((s, idx) => {
+                                const rowBg = idx % 2 === 0 ? 'bg-white' : 'bg-slate-100';
+                                const stickyBg = idx % 2 === 0 ? 'bg-white' : 'bg-[#f1f5f9]';
+                                return `
+                                    <tr class="${rowBg} hover:bg-blue-50/40">
+                                        <td class="px-4 py-3 font-semibold text-gray-900 border-r-2 border-b border-gray-400 sticky left-0 ${stickyBg} z-20 whitespace-nowrap shadow-sm">${s.name}</td>${testNames.map(test => `
+                                            <td class="px-2 py-3 text-center border-r border-b border-gray-200">
+                                                ${s.tests[test] ? '<span class="text-green-600 font-extrabold text-sm">✔</span>' : '<span class="text-gray-300 font-light">-</span>'}
+                                            </td>
+                                        `).join('')}
+                                    </tr>
+                                `;
+                            }).join('')}
                         </tbody>
                     </table>
                 </div>
