@@ -1,186 +1,189 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>WAQTC Matrix</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <style>
-    .bg-grid-pattern {
-      background-color: #0c366e;
-      background-image: radial-gradient(rgba(255, 255, 255, 0.1) 1px, transparent 1px);
-      background-size: 20px 20px;
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CE 210 Materials Lab – WAQTC Progress Tracker</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .writing-mode-vertical {
+            writing-mode: vertical-rl;
+            transform: rotate(180deg);
+            white-space: nowrap;
+            height: 140px;
+        }
+    </style>
 </head>
-<body class="bg-gray-50 font-sans">
+<body class="bg-slate-100 min-h-screen font-sans">
 
-  <header class="bg-grid-pattern text-white pt-10 pb-20 px-8">
-    <div class="max-w-7xl mx-auto flex justify-between items-start">
-      <div class="flex items-center gap-5">
-        <div class="bg-[#2c3e50] p-3 rounded-lg shadow-lg border border-gray-600">
-           <span class="text-2xl">🏗️</span>
-        </div>
-        <div>
-          <h1 class="text-3xl font-bold tracking-tight">CE 210 Materials Lab – WAQTC Progress Tracker</h1>
-          <p class="text-gray-300 text-sm mt-1 uppercase tracking-wider font-bold">Western Alliance for Quality Transportation Construction · Certification Progress</p>
-        </div>
-      </div>
-      <button id="adminLoginBtn" class="bg-white/10 hover:bg-white/20 text-white px-4 py-2 rounded text-xs font-bold uppercase tracking-widest transition-all border border-white/20">Admin Access</button>
-    </div>
-  </header>
-
-  <main class="px-6 -mt-12">
-    <section class="max-w-7xl mx-auto bg-white rounded-xl shadow-[0_2px_15px_-3px_rgba(0,0,0,0.07),0_10px_20px_-2px_rgba(0,0,0,0.04)] border border-gray-100 p-8 mb-10">
-      <h2 class="text-xs text-gray-500 uppercase tracking-widest mb-6 font-bold">Class Leaderboard</h2>
-      <div id="leaderboardContent" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5"></div>
-    </section>
-
-    <div id="adminPanel" class="hidden max-w-7xl mx-auto bg-red-50 p-6 rounded-lg mb-10 border border-red-200">
-      <h2 class="text-lg font-bold text-red-800 mb-4 uppercase text-xs tracking-widest">Admin Controls</h2>
-      <div class="grid md:grid-cols-2 gap-4">
-        <div class="flex gap-2">
-          <input type="text" id="newStudentName" placeholder="Student Name" class="border p-2 rounded w-full">
-          <button id="addStudentBtn" class="bg-blue-600 text-white px-6 py-2 rounded font-bold text-sm uppercase tracking-wide">Add Student</button>
-        </div>
-        <div class="flex gap-2">
-          <input type="text" id="newTestName" placeholder="New Test Name" class="border p-2 rounded w-full">
-          <button id="addTestBtn" class="bg-green-600 text-white px-6 py-2 rounded font-bold text-sm uppercase tracking-wide">Add Test</button>
-        </div>
-      </div>
-    </div>
-
-    <div class="max-w-7xl mx-auto">
-      <h2 class="text-xs text-gray-500 uppercase tracking-widest mb-4 font-bold">Certification Checklist</h2>
-      
-      <div id="dashboard" class="bg-white shadow-sm rounded-lg overflow-x-auto border border-gray-200 mb-6">
-        <p class="p-10 text-center text-gray-400 italic">Connecting to secure database...</p>
-      </div>
-      <div class="text-center text-gray-500 text-sm mb-12 font-bold">
-        WAQTC Resources: <a href="https://www.waqtc.org/technician-resources/" target="_blank" class="text-blue-600 hover:underline">waqtc.org/technician-resources</a>
-      </div>
-    </div>
-  </main>
-
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-    import { getFirestore, collection, getDocs, doc, updateDoc, addDoc, deleteDoc, deleteField } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
-
-    const firebaseConfig = {
-      apiKey: "AIzaSyC0tR3hpuQpTHTEObm21azoQKq9Qbm4LP0",
-      authDomain: "ce-210-waqtc-progress-tracker.firebaseapp.com",
-      projectId: "ce-210-waqtc-progress-tracker",
-      storageBucket: "ce-210-waqtc-progress-tracker.firebasestorage.app",
-      messagingSenderId: "951204967927",
-      appId: "1:951204967927:web:721cb7e4119bb0042e6af2"
-    };
-
-    const db = getFirestore(initializeApp(firebaseConfig));
-    let isAdmin = false;
-
-    document.getElementById('adminLoginBtn').onclick = () => {
-      const pass = prompt("Enter Administrator Password:");
-      if (pass === "WAQTC2026") {
-        isAdmin = true;
-        document.getElementById('adminPanel').classList.remove('hidden');
-        renderTable();
-      } else { alert("Access Denied."); }
-    };
-
-    async function renderTable() {
-      const dashboard = document.getElementById('dashboard');
-      const lbContent = document.getElementById('leaderboardContent');
-      try {
-        const snap = await getDocs(collection(db, "students"));
-        let students = [], tests = new Set();
-        
-        snap.forEach(d => { 
-          let data = d.data();
-          let count = Object.values(data).filter(v => v === true).length;
-          students.push({id: d.id, count, ...data}); 
-          Object.keys(data).forEach(k => k !== 'name' && tests.add(k)); 
-        });
-
-        const totalPossible = tests.size;
-        let sortedLeaders = students.sort((a,b) => b.count - a.count || a.name.localeCompare(b.name));
-
-        lbContent.innerHTML = sortedLeaders.slice(0, 10).map((s, i) => {
-          let pct = totalPossible > 0 ? Math.round((s.count/totalPossible)*100) : 0;
-          let rank = i + 1;
-          let tint = rank === 1 ? 'bg-[#fffbeb] border-yellow-200' : rank === 2 ? 'bg-[#f0f7ff] border-blue-200' : rank === 3 ? 'bg-[#fff7ed] border-orange-200' : 'bg-white border-gray-100';
-          let icon = rank === 1 ? '🏆' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : `<span class="text-gray-300 text-xs">#${rank}</span>`;
-          
-          return `
-            <div class="${tint} p-5 rounded-lg border shadow-sm transition-transform hover:scale-[1.02]">
-              <div class="flex justify-between items-center mb-3">
-                <div class="flex items-center gap-3">
-                  <span class="text-xl">${icon}</span>
-                  <span class="font-bold text-gray-800 text-sm tracking-tight">${s.name}</span>
+    <!-- Header Banner -->
+    <header class="bg-[#0f2d59] text-white shadow-md">
+        <div class="max-w-7xl mx-auto px-6 py-6 flex flex-col md:flex-row justify-between items-center">
+            <div class="flex items-center space-x-4">
+                <div class="bg-amber-500 p-3 rounded-lg shadow">
+                    <!-- Construction Icon -->
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                    </svg>
                 </div>
-                <span class="font-bold text-blue-600 text-sm">${pct}%</span>
-              </div>
-              <div class="w-full bg-gray-100 rounded-full h-2.5">
-                <div class="bg-gradient-to-r from-blue-600 to-green-400 h-2.5 rounded-full shadow-[0_0_8px_rgba(59,130,246,0.3)]" style="width: ${pct}%"></div>
-              </div>
-            </div>`;
-        }).join('');
+                <div>
+                    <h1 class="text-2xl font-bold tracking-wide">CE 210 Materials Lab – WAQTC Progress Tracker</h1>
+                    <p class="text-xs text-blue-200 tracking-wider uppercase font-semibold mt-1">Western Alliance for Quality Transportation Construction · Certification Progress</p>
+                </div>
+            </div>
+            <div class="mt-4 md:mt-0">
+                <a href="https://docs.google.com/spreadsheets/d/1X7spwnIoWpaxsxLCxaXKDPYj9tIDPFrNb4Iv5cU2TQc/edit" target="_blank" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-semibold shadow transition duration-200">
+                    Admin Access (Edit Sheet)
+                </a>
+            </div>
+        </div>
+    </header>
 
-        let sortedTests = Array.from(tests).sort();
-        // Set header to bold
-        let html = `<table class="w-full text-sm border-collapse border-0"><thead><tr class="bg-[#1a3a5f] text-white">
-          <th class="p-4 text-left whitespace-nowrap sticky left-0 z-20 bg-[#1a3a5f] border-r border-white/10 shadow-[4px_0_10px_rgba(0,0,0,0.15)] text-[10px] tracking-widest font-bold uppercase">Student</th>` + 
-          sortedTests.map(t => `<th class="p-4 whitespace-nowrap text-[10px] tracking-widest font-bold uppercase text-white">
-            <a href="https://www.waqtc.org/technician-resources/" target="_blank" class="hover:underline">${t.replace(/_/g,' ')}</a> 
-            ${isAdmin ? `<button onclick="window.deleteTest('${t}')" class="text-red-400 ml-2 hover:text-white">×</button>`:''}</th>`).join('') +
-          `</tr></thead><tbody>`;
+    <!-- Main Container -->
+    <main class="max-w-7xl mx-auto px-6 py-8 space-y-8">
 
-        students.sort((a,b) => a.name.localeCompare(b.name)).forEach(s => {
-          html += `<tr class="border-b border-gray-100 hover:bg-gray-50 transition-colors">
-            <td class="p-4 font-bold text-gray-700 sticky left-0 z-10 bg-white border-r border-gray-100 shadow-[4px_0_10px_rgba(0,0,0,0.03)] whitespace-nowrap">${isAdmin ? `<button onclick="window.deleteStudent('${s.id}')" class="text-red-500 mr-3">×</button>`:''}${s.name}</td>` +
-            sortedTests.map(t => `<td class="p-4 text-center">
-              <label class="relative inline-flex items-center cursor-pointer">
-                <input type="checkbox" class="sr-only peer toggle-glow" ${s[t] ? 'checked' : ''} onchange="window.updateToggle('${s.id}', '${t}', this.checked)">
-                <div class="w-11 h-6 bg-gray-200 rounded-full peer peer-checked:bg-green-500 peer-checked:shadow-[0_0_10px_rgba(34,197,94,0.7)] after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-full toggle-bg"></div>
-              </label>
-            </td>`).join('') + `</tr>`;
-        });
-        dashboard.innerHTML = html + `</tbody></table>`;
-      } catch(e) { console.error(e); }
-    }
+        <!-- Class Leaderboard Section -->
+        <section class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <h2 class="text-lg font-bold text-gray-800 uppercase tracking-wider mb-4 border-b pb-2">Class Leaderboard</h2>
+            <div id="class-leaderboard" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="text-gray-500 text-sm italic py-4">Loading leaderboard rankings...</div>
+            </div>
+        </section>
 
-    window.updateToggle = async (id, field, val) => { await updateDoc(doc(db, 'students', id), {[field]: val}); renderTable(); };
-    window.deleteStudent = async (id) => { if(confirm('Delete student?')) await deleteDoc(doc(db, 'students', id)); renderTable(); };
-    window.deleteTest = async (test) => {
-      if(!confirm('This will delete the entire column for ALL students. Proceed?')) return;
-      const snaps = await getDocs(collection(db, "students"));
-      const updates = snaps.docs.map(d => updateDoc(d.ref, { [test]: deleteField() }));
-      await Promise.all(updates);
-      renderTable();
-    };
+        <!-- Certification Checklist Section -->
+        <section class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <h2 class="text-lg font-bold text-gray-800 uppercase tracking-wider mb-4 border-b pb-2">Certification Checklist</h2>
+            <div id="certification-checklist" class="overflow-x-auto">
+                <div class="text-gray-500 text-sm italic py-8 text-center">Connecting to secure database & loading student progress...</div>
+            </div>
+        </section>
 
-    document.getElementById('addStudentBtn').onclick = async () => {
-      const name = document.getElementById('newStudentName').value.trim();
-      if(!name) return;
-      let data = { name };
-      document.querySelectorAll('th').forEach(th => {
-        if(th.innerText.includes('×')) data[th.innerText.replace(' ×', '').replace(/ /g, '_')] = false;
-      });
-      await addDoc(collection(db, "students"), data);
-      document.getElementById('newStudentName').value = '';
-      renderTable();
-    };
+        <!-- Footer Resources -->
+        <footer class="text-center text-sm text-gray-600 py-4">
+            WAQTC Resources: <a href="https://waqtc.org/technician-resources" target="_blank" class="text-blue-600 hover:underline">waqtc.org/technician-resources</a>
+        </footer>
+    </main>
 
-    document.getElementById('addTestBtn').onclick = async () => {
-      const name = document.getElementById('newTestName').value.trim();
-      if(!name) return;
-      const field = name.replace(/[\/ ]/g, '_').toUpperCase();
-      const snaps = await getDocs(collection(db, "students"));
-      const updates = snaps.docs.map(d => updateDoc(d.ref, {[field]: false}));
-      await Promise.all(updates);
-      document.getElementById('newTestName').value = '';
-      renderTable();
-    };
+    <!-- JavaScript Data Fetcher & UI Renderer -->
+    <script>
+        const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRsP2SePg80v-QIdz-1NIRrFOpmZDaGDiPZC0uwBjaxXNpBtl597rpVQ-xBtgQD_Vao9HV8_dKp8Tvz/pub?output=csv';
 
-    renderTable();
-  </script>
+        async function loadTrackerData() {
+            try {
+                const response = await fetch(CSV_URL);
+                const csvText = await response.text();
+                
+                const rows = parseCSV(csvText);
+                if (rows.length === 0) return;
+
+                const headers = rows[0]; // First row: Student Name, Sampling, etc.
+                const studentRows = rows.slice(1).filter(row => row[0] && row[0].trim() !== '');
+
+                let students = studentRows.map(row => {
+                    const name = row[0];
+                    let completedCount = 0;
+                    const tests = {};
+
+                    for (let i = 1; i < headers.length; i++) {
+                        const testName = headers[i];
+                        const cellValue = row[i] ? row[i].trim() : '';
+                        const isDone = cellValue !== ''; // True if marked with 'X' or any value
+                        tests[testName] = isDone;
+                        if (isDone) completedCount++;
+                    }
+
+                    return { name, completedCount, tests };
+                });
+
+                // Sort students descending by completed tests for leaderboard
+                students.sort((a, b) => b.completedCount - a.completedCount);
+
+                renderLeaderboard(students);
+                renderChecklist(headers.slice(1), students);
+
+            } catch (error) {
+                console.error("Failed to load Google Sheet data:", error);
+                document.getElementById('certification-checklist').innerHTML = `
+                    <div class="text-red-500 text-sm py-4 text-center">Error loading live data. Please check your published Google Sheet link.</div>
+                `;
+            }
+        }
+
+        // Robust CSV Parser handling quoted fields
+        function parseCSV(text) {
+            let lines = text.split('\n');
+            return lines.map(line => {
+                let row = [];
+                let inQuotes = false;
+                let entry = '';
+                for (let char of line) {
+                    if (char === '"') {
+                        inQuotes = !inQuotes;
+                    } else if (char === ',' && !inQuotes) {
+                        row.push(entry);
+                        entry = '';
+                    } else {
+                        entry += char;
+                    }
+                }
+                row.push(entry);
+                return row.map(cell => cell.replace(/^"|"$/g, '').trim());
+            });
+        }
+
+        function renderLeaderboard(students) {
+            const container = document.getElementById('class-leaderboard');
+            if (!container) return;
+
+            // Take top students or all sorted students
+            container.innerHTML = students.map((s, index) => {
+                let badgeColor = 'bg-blue-100 text-blue-800';
+                if (index === 0) badgeColor = 'bg-amber-100 text-amber-800 border border-amber-300';
+                else if (index === 1) badgeColor = 'bg-slate-200 text-slate-800';
+                else if (index === 2) badgeColor = 'bg-orange-100 text-orange-800';
+
+                return `
+                    <div class="flex justify-between items-center p-3 bg-gray-50 rounded-lg border border-gray-100 shadow-sm">
+                        <div class="flex items-center space-x-3">
+                            <span class="font-bold text-gray-500 w-6">#${index + 1}</span>
+                            <span class="font-semibold text-gray-800 text-sm">${s.name}</span>
+                        </div>
+                        <span class="${badgeColor} px-2.5 py-1 rounded-full text-xs font-bold">${s.completedCount} Certifications</span>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function renderChecklist(testNames, students) {
+            const container = document.getElementById('certification-checklist');
+            if (!container) return;
+
+            container.innerHTML = `
+                <table class="min-w-full divide-y divide-gray-200 text-xs">
+                    <thead>
+                        <tr>
+                            <th class="px-4 py-3 text-left font-bold text-gray-700 bg-gray-50 sticky left-0 z-10 shadow-sm">Student Name</th>
+                            ${testNames.map(test => `<th class="px-2 py-3 text-center font-semibold text-gray-600 bg-gray-50"><div class="writing-mode-vertical mx-auto">${test}</div></th>`).join('')}
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-200 bg-white">
+                        ${students.map((s, idx) => `
+                            <tr class="${idx % 2 === 0 ? 'bg-white' : 'bg-slate-50/50'} hover:bg-blue-50/30">
+                                <td class="px-4 py-3 font-medium text-gray-900 sticky left-0 bg-white shadow-sm">${s.name}</td>${testNames.map(test => `
+                                    <td class="px-2 py-3 text-center">
+                                        ${s.tests[test] ? '<span class="text-green-600 font-extrabold text-sm">✔</span>' : '<span class="text-gray-300 font-light">-</span>'}
+                                    </td>
+                                `).join('')}
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            `;
+        }
+
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', loadTrackerData);
+    </script>
 </body>
 </html>
