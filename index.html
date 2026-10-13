@@ -42,9 +42,9 @@
             </div>
         </section>
 
-        <!-- Certification Checklist Section (Black Outline Borders) -->
-        <section class="bg-white rounded-xl shadow-sm border border-black p-6">
-            <h2 class="text-lg font-bold text-gray-800 uppercase tracking-wider mb-4 border-b border-black pb-2">Certification Checklist</h2>
+        <!-- Certification Checklist Section (Soft Look with Darkened Headings) -->
+        <section class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <h2 class="text-lg font-bold text-gray-800 uppercase tracking-wider mb-4 border-b pb-2">Certification Checklist</h2>
             <div id="certification-checklist">
                 <div class="text-gray-500 text-sm italic py-8 text-center">Connecting to secure database & loading student progress...</div>
             </div>
@@ -127,7 +127,6 @@
             const container = document.getElementById('class-leaderboard');
             if (!container) return;
 
-            // Render ALL students in a 3-column grid so user can scroll down through the entire class
             container.innerHTML = `
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
                     ${students.map((s, index) => {
@@ -162,35 +161,8 @@
             if (!container) return;
 
             container.innerHTML = `
-                <div class="relative overflow-auto max-h-[580px] border-2 border-black rounded-lg shadow-inner">
-                    <table class="min-w-full divide-y divide-black text-xs border-collapse">
+                <div class="relative overflow-auto max-h-[580px] border border-gray-300 rounded-lg shadow-sm">
+                    <table class="min-w-full divide-y divide-gray-200 text-xs border-collapse">
                         <thead>
                             <tr>
-                                <th class="px-4 py-3 text-left font-bold text-black bg-gray-100 border-r-2 border-b-2 border-black sticky left-0 top-0 z-30 min-w-[14rem]">Student Name</th>
-                                ${testNames.map(test => `
-                                    <th class="px-2 py-3 text-center font-bold text-black bg-gray-100 border-r border-b-2 border-black sticky top-0 z-25 w-28 min-w-[7rem] max-w-[8rem] whitespace-normal break-words">
-                                        ${test}
-                                    </th>
-                                `).join('')}
-                            </tr>
-                        </thead>
-                        <tbody class="divide-y divide-black bg-white">
-                            ${students.map((s, idx) => `
-                                <tr class="${idx % 2 === 0 ? 'bg-white' : 'bg-slate-50'}">
-                                    <td class="px-4 py-3 font-semibold text-black border-r-2 border-black sticky left-0 bg-white z-20 whitespace-nowrap">${s.name}</td>${testNames.map(test => `
-                                        <td class="px-2 py-3 text-center border-r border-black">
-                                            ${s.tests[test] ? '<span class="text-green-700 font-black text-sm">✔</span>' : '<span class="text-gray-400 font-light">-</span>'}
-                                        </td>
-                                    `).join('')}
-                                </tr>
-                            `).join('')}
-                        </tbody>
-                    </table>
-                </div>
-            `;
-        }
-
-        document.addEventListener('DOMContentLoaded', loadTrackerData);
-    </script>
-</body>
-</html>
+                                <th class="px-4 py-3 text-left font-bold text-gray-900 bg-gray-200 border-r-2 border-b-2 border-gray-400 sticky left-0 top-0 z-30 min-w-[14rem]">Student Name</th>
