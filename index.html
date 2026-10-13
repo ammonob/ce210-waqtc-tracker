@@ -47,12 +47,13 @@
     <!-- Main Container -->
     <main class="max-w-7xl mx-auto px-6 py-8 space-y-8">
 
-        <!-- Class Leaderboard Section -->
+        <!-- Class Leaderboard Section (Shows ~3.5 rows) -->
         <section class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
             <div class="flex justify-between items-center mb-4 border-b pb-2">
                 <h2 class="text-lg font-bold text-gray-800 uppercase tracking-wider">Class Leaderboard</h2>
                 <span class="text-xs text-gray-500 font-medium italic">Scroll down to view full class rankings</span>
             </div>
+            <!-- Height set to show 3 full rows + preview of 4th -->
             <div id="class-leaderboard" class="max-h-[235px] overflow-y-auto pr-2">
                 <div class="text-gray-500 text-sm italic py-4 font-mono loading-text">Loading leaderboard rankings...</div>
             </div>
@@ -74,10 +75,10 @@
 
     <!-- JavaScript Data Fetcher, UI Renderer & Loader Animator -->
     <script>
-        const BASE_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRsP2SePg80v-QIdz-1NIRrFOpmZDaGDiPZC0uwBjaxXNpBtl597rpVQ-xBtgQD_Vao9HV8_dKp8Tvz/pub?output=csv';
+        // Updated to point directly to your new published sheet CSV endpoint
+        const BASE_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQtseO-b1lNH6L6ltARhp7fC-s4UNylDTRVkivnRYeH40yv2hvyCqZe3a2R0K9sy4BRRLMjh_R78NIK/pub?output=csv';
         let loadingInterval = null;
 
-        // Animate loading dots across the text
         function startLoadingAnimation() {
             let frames = [
                 "Loading database.    ",
