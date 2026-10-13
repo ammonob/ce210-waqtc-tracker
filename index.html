@@ -30,15 +30,19 @@
     <!-- Main Container -->
     <main class="max-w-7xl mx-auto px-6 py-8 space-y-8">
 
-        <!-- Class Leaderboard Section (3x3 Grid, max 9 students visible with scroll) -->
-        <section class="bg-white rounded-xl shadow-sm border border-black p-6">
-            <h2 class="text-lg font-bold text-gray-800 uppercase tracking-wider mb-4 border-b border-black pb-2">Class Leaderboard (Top 9)</h2>
-            <div id="class-leaderboard" class="max-h-[380px] overflow-y-auto pr-2">
+        <!-- Class Leaderboard Section (Scrollable Grid) -->
+        <section class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <div class="flex justify-between items-center mb-4 border-b pb-2">
+                <h2 class="text-lg font-bold text-gray-800 uppercase tracking-wider">Class Leaderboard</h2>
+                <span class="text-xs text-gray-500 font-medium italic">Scroll inside box to see full class</span>
+            </div>
+            <!-- Fixed height box (~3 rows visible at once), scrollable to see remaining students -->
+            <div id="class-leaderboard" class="max-h-[300px] overflow-y-auto pr-2">
                 <div class="text-gray-500 text-sm italic py-4">Loading leaderboard rankings...</div>
             </div>
         </section>
 
-        <!-- Certification Checklist Section -->
+        <!-- Certification Checklist Section (Black Outline Borders) -->
         <section class="bg-white rounded-xl shadow-sm border border-black p-6">
             <h2 class="text-lg font-bold text-gray-800 uppercase tracking-wider mb-4 border-b border-black pb-2">Certification Checklist</h2>
             <div id="certification-checklist">
@@ -84,6 +88,7 @@
                     return { name, completedCount, tests };
                 });
 
+                // Sort students descending by completed tests for leaderboard
                 students.sort((a, b) => b.completedCount - a.completedCount);
 
                 renderLeaderboard(students, totalTests);
@@ -122,12 +127,10 @@
             const container = document.getElementById('class-leaderboard');
             if (!container) return;
 
-            // Slice top 9 students for the 3x3 grid (3 rows of 3 columns)
-            const topStudents = students.slice(0, 9);
-
+            // Render ALL students in a 3-column grid so user can scroll down through the entire class
             container.innerHTML = `
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    ${topStudents.map((s, index) => {
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    ${students.map((s, index) => {
                         let rankDisplay = `#${index + 1}`;
                         if (index === 0) rankDisplay = '🥇';
                         else if (index === 1) rankDisplay = '🥈';
@@ -136,15 +139,15 @@
                         const percent = totalTests > 0 ? (s.completedCount / totalTests) * 100 : 0;
 
                         return `
-                            <div class="flex items-center p-3 bg-white rounded-lg border-2 border-black shadow-sm">
-                                <div class="font-bold text-center w-10 text-xl text-gray-800">${rankDisplay}</div>
+                            <div class="flex items-center p-3 bg-gray-50 rounded-lg border border-gray-200 shadow-sm hover:shadow transition-shadow duration-150">
+                                <div class="font-bold text-center w-8 text-lg text-gray-800">${rankDisplay}</div>
                                 <div class="flex-1 ml-2">
                                     <div class="flex justify-between items-center mb-1">
-                                        <span class="font-bold text-gray-900 text-sm truncate max-w-[130px]">${s.name}</span>
-                                        <span class="text-xs font-bold text-gray-800">${s.completedCount}/${totalTests}</span>
+                                        <span class="font-semibold text-gray-900 text-sm truncate max-w-[130px]">${s.name}</span>
+                                        <span class="text-xs font-bold text-gray-700">${s.completedCount}/${totalTests}</span>
                                     </div>
-                                    <div class="w-full bg-gray-200 rounded-full h-3 overflow-hidden border border-black">
-                                        <div class="h-3 rounded-full transition-all duration-500" style="width: ${percent}%; background: linear-gradient(to right, #3b82f6, #22c55e);"></div>
+                                    <div class="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden border border-gray-300">
+                                        <div class="h-2.5 rounded-full transition-all duration-500" style="width: ${percent}%; background: linear-gradient(to right, #3b82f6, #22c55e);"></div>
                                     </div>
                                 </div>
                             </div>
