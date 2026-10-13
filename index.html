@@ -1,10 +1,110 @@
-<!-- JavaScript Data Fetcher & UI Renderer -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CE 210 Materials Lab – WAQTC Progress Tracker</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+    </style>
+</head>
+<body class="bg-slate-100 min-h-screen font-sans">
+
+    <!-- Header Banner -->
+    <header class="bg-[#0f2d59] text-white shadow-md">
+        <div class="max-w-7xl mx-auto px-6 py-6 flex flex-col md:flex-row justify-between items-center">
+            <div class="flex items-center space-x-4">
+                <div class="bg-amber-500 p-3 rounded-lg shadow">
+                    <!-- Construction Icon -->
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                    </svg>
+                </div>
+                <div>
+                    <h1 class="text-2xl font-bold tracking-wide">CE 210 Materials Lab – WAQTC Progress Tracker</h1>
+                    <p class="text-xs text-blue-200 tracking-wider uppercase font-semibold mt-1">Western Alliance for Quality Transportation Construction · Certification Progress</p>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <main class="max-w-7xl mx-auto px-6 py-8 space-y-8">
+
+        <!-- Class Leaderboard Section -->
+        <section class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <div class="flex justify-between items-center mb-4 border-b pb-2">
+                <h2 class="text-lg font-bold text-gray-800 uppercase tracking-wider">Class Leaderboard</h2>
+                <span class="text-xs text-gray-500 font-medium italic">Scroll down to view full class rankings</span>
+            </div>
+            <div id="class-leaderboard" class="max-h-[235px] overflow-y-auto pr-2">
+                <div class="text-gray-500 text-sm italic py-4 font-mono loading-text">Loading leaderboard rankings...</div>
+            </div>
+        </section>
+
+        <!-- Certification Checklist Section -->
+        <section class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <h2 class="text-lg font-bold text-gray-800 uppercase tracking-wider mb-4 border-b pb-2">Certification Checklist</h2>
+            <div id="certification-checklist">
+                <div class="text-gray-500 text-sm italic py-8 text-center font-mono loading-text">Connecting to secure database & loading student progress...</div>
+            </div>
+        </section>
+
+        <!-- Footer Resources -->
+        <footer class="text-center text-sm text-gray-600 py-4">
+            WAQTC Resources: <a href="https://waqtc.org/technician-resources" target="_blank" class="text-blue-600 hover:underline">waqtc.org/technician-resources</a>
+        </footer>
+    </main>
+
+    <!-- JavaScript Data Fetcher, UI Renderer & Loader Animator -->
     <script>
         const BASE_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRsP2SePg80v-QIdz-1NIRrFOpmZDaGDiPZC0uwBjaxXNpBtl597rpVQ-xBtgQD_Vao9HV8_dKp8Tvz/pub?output=csv';
+        let loadingInterval = null;
+
+        // Animate loading dots across the text
+        function startLoadingAnimation() {
+            let frames = [
+                "Loading database.    ",
+                "Loading database .   ",
+                "Loading database  .  ",
+                "Loading database   . ",
+                "Loading database    ."
+            ];
+            let i = 0;
+            loadingInterval = setInterval(() => {
+                const loadingElements = document.querySelectorAll('.loading-text');
+                loadingElements.forEach(el => {
+                    el.textContent = frames[i % frames.length];
+                });
+                i++;
+            }, 300);
+        }
+
+        function stopLoadingAnimation() {
+            if (loadingInterval) {
+                clearInterval(loadingInterval);
+                loadingInterval = null;
+            }
+        }
 
         async function loadTrackerData() {
             try {
-                // Append a timestamp to the URL to bypass browser caching
                 const CSV_URL = `${BASE_CSV_URL}&t=${new Date().getTime()}`;
                 const response = await fetch(CSV_URL);
                 if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
@@ -35,11 +135,19 @@
 
                 students.sort((a, b) => b.completedCount - a.completedCount);
 
+                stopLoadingAnimation();
                 renderLeaderboard(students, totalTests);
                 renderChecklist(headers.slice(1), students);
 
             } catch (error) {
                 console.error("Failed to load Google Sheet data:", error);
+                stopLoadingAnimation();
+                document.getElementById('class-leaderboard').innerHTML = `
+                    <div class="text-red-500 text-sm py-4">Error loading leaderboard.</div>
+                `;
+                document.getElementById('certification-checklist').innerHTML = `
+                    <div class="text-red-500 text-sm py-4 text-center">Error loading live data: ${error.message}</div>
+                `;
             }
         }
 
@@ -135,10 +243,12 @@
             `;
         }
 
-        // Load immediately when page opens
         document.addEventListener('DOMContentLoaded', () => {
+            startLoadingAnimation();
             loadTrackerData();
-            // Automatically re-fetch data every 30 seconds in the background
+            // Auto-poll every 30 seconds
             setInterval(loadTrackerData, 30000);
         });
     </script>
+</body>
+</html>
