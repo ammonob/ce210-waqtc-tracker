@@ -6,6 +6,24 @@
     <title>CE 210 Materials Lab – WAQTC Progress Tracker</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Custom scrollbar styling for clean look */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+    </style>
 </head>
 <body class="bg-slate-100 min-h-screen font-sans">
 
@@ -30,19 +48,19 @@
     <!-- Main Container -->
     <main class="max-w-7xl mx-auto px-6 py-8 space-y-8">
 
-        <!-- Class Leaderboard Section (Scrollable Grid) -->
+        <!-- Class Leaderboard Section (Shows exactly 3 rows) -->
         <section class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
             <div class="flex justify-between items-center mb-4 border-b pb-2">
                 <h2 class="text-lg font-bold text-gray-800 uppercase tracking-wider">Class Leaderboard</h2>
                 <span class="text-xs text-gray-500 font-medium italic">Scroll inside box to see full class</span>
             </div>
-            <!-- Fixed height box (~3 rows visible at once), scrollable to see remaining students -->
-            <div id="class-leaderboard" class="max-h-[300px] overflow-y-auto pr-2">
+            <!-- Fixed container height capped to 3 rows -->
+            <div id="class-leaderboard" class="max-h-[210px] overflow-y-auto pr-2">
                 <div class="text-gray-500 text-sm italic py-4">Loading leaderboard rankings...</div>
             </div>
         </section>
 
-        <!-- Certification Checklist Section (Soft Look with Darkened Headings) -->
+        <!-- Certification Checklist Section (Fixed sticky borders during scroll) -->
         <section class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
             <h2 class="text-lg font-bold text-gray-800 uppercase tracking-wider mb-4 border-b pb-2">Certification Checklist</h2>
             <div id="certification-checklist">
@@ -63,14 +81,15 @@
         async function loadTrackerData() {
             try {
                 const response = await fetch(CSV_URL);
-                const csvText = await response.text();
+                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
                 
+                const csvText = await response.text();
                 const rows = parseCSV(csvText);
-                if (rows.length === 0) return;
+                if (rows.length === 0) throw new Error("CSV file is empty");
 
                 const headers = rows[0]; 
                 const totalTests = headers.length - 1;
-                const studentRows = rows.slice(1).filter(row => row[0] && row[0].trim() !== '');
+                const studentRows = rows.slice(1).filter(row => row && row[0] && row[0].trim() !== '');
 
                 let students = studentRows.map(row => {
                     const name = row[0];
@@ -88,7 +107,6 @@
                     return { name, completedCount, tests };
                 });
 
-                // Sort students descending by completed tests for leaderboard
                 students.sort((a, b) => b.completedCount - a.completedCount);
 
                 renderLeaderboard(students, totalTests);
@@ -96,31 +114,35 @@
 
             } catch (error) {
                 console.error("Failed to load Google Sheet data:", error);
+                document.getElementById('class-leaderboard').innerHTML = `
+                    <div class="text-red-500 text-sm py-4">Error loading leaderboard.</div>
+                `;
                 document.getElementById('certification-checklist').innerHTML = `
-                    <div class="text-red-500 text-sm py-4 text-center">Error loading live data. Please check your published Google Sheet link.</div>
+                    <div class="text-red-500 text-sm py-4 text-center">Error loading live data: ${error.message}</div>
                 `;
             }
         }
 
         function parseCSV(text) {
-            let lines = text.split('\n');
+            let lines = text.split(/\r\n|\n/);
             return lines.map(line => {
                 let row = [];
                 let inQuotes = false;
                 let entry = '';
-                for (let char of line) {
+                for (let i = 0; i < line.length; i++) {
+                    let char = line[i];
                     if (char === '"') {
                         inQuotes = !inQuotes;
                     } else if (char === ',' && !inQuotes) {
-                        row.push(entry);
+                        row.push(entry.trim());
                         entry = '';
                     } else {
                         entry += char;
                     }
                 }
-                row.push(entry);
+                row.push(entry.trim());
                 return row.map(cell => cell.replace(/^"|"$/g, '').trim());
-            });
+            }).filter(row => row.some(cell => cell !== ''));
         }
 
         function renderLeaderboard(students, totalTests) {
@@ -138,7 +160,7 @@
                         const percent = totalTests > 0 ? (s.completedCount / totalTests) * 100 : 0;
 
                         return `
-                            <div class="flex items-center p-3 bg-gray-50 rounded-lg border border-gray-200 shadow-sm hover:shadow transition-shadow duration-150">
+                            <div class="flex items-center p-3 bg-gray-50 rounded-lg border border-gray-200 shadow-sm hover:shadow transition-shadow duration-150 h-[56px]">
                                 <div class="font-bold text-center w-8 text-lg text-gray-800">${rankDisplay}</div>
                                 <div class="flex-1 ml-2">
                                     <div class="flex justify-between items-center mb-1">
@@ -146,50 +168,4 @@
                                         <span class="text-xs font-bold text-gray-700">${s.completedCount}/${totalTests}</span>
                                     </div>
                                     <div class="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden border border-gray-300">
-                                        <div class="h-2.5 rounded-full transition-all duration-500" style="width: ${percent}%; background: linear-gradient(to right, #3b82f6, #22c55e);"></div>
-                                    </div>
-                                </div>
-                            </div>
-                        `;
-                    }).join('')}
-                </div>
-            `;
-        }
-
-        function renderChecklist(testNames, students) {
-            const container = document.getElementById('certification-checklist');
-            if (!container) return;
-
-            container.innerHTML = `
-                <div class="relative overflow-auto max-h-[580px] border border-gray-300 rounded-lg shadow-sm">
-                    <table class="min-w-full divide-y divide-gray-200 text-xs border-collapse">
-                        <thead>
-                            <tr>
-                                <th class="px-4 py-3 text-left font-bold text-gray-900 bg-gray-200 border-r-2 border-b-2 border-gray-400 sticky left-0 top-0 z-30 min-w-[14rem]">Student Name</th>
-                                ${testNames.map(test => `
-                                    <th class="px-2 py-3 text-center font-bold text-gray-900 bg-gray-100 border-r border-b-2 border-gray-400 sticky top-0 z-25 w-28 min-w-[7rem] max-w-[8rem] whitespace-normal break-words">
-                                        ${test}
-                                    </th>
-                                `).join('')}
-                            </tr>
-                        </thead>
-                        <tbody class="divide-y divide-gray-200 bg-white">
-                            ${students.map((s, idx) => `
-                                <tr class="${idx % 2 === 0 ? 'bg-white' : 'bg-slate-50/60'} hover:bg-blue-50/40">
-                                    <td class="px-4 py-3 font-semibold text-gray-900 border-r-2 border-gray-400 sticky left-0 bg-white z-20 whitespace-nowrap shadow-sm">${s.name}</td>${testNames.map(test => `
-                                        <td class="px-2 py-3 text-center border-r border-gray-100">
-                                            ${s.tests[test] ? '<span class="text-green-600 font-extrabold text-sm">✔</span>' : '<span class="text-gray-300 font-light">-</span>'}
-                                        </td>
-                                    `).join('')}
-                                </tr>
-                            `).join('')}
-                        </tbody>
-                    </table>
-                </div>
-            `;
-        }
-
-        document.addEventListener('DOMContentLoaded', loadTrackerData);
-    </script>
-</body>
-</html>
+                                        <div class="h-2.5 rounded-full transition-all duration
