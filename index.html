@@ -166,3 +166,30 @@
                         <thead>
                             <tr>
                                 <th class="px-4 py-3 text-left font-bold text-gray-900 bg-gray-200 border-r-2 border-b-2 border-gray-400 sticky left-0 top-0 z-30 min-w-[14rem]">Student Name</th>
+                                ${testNames.map(test => `
+                                    <th class="px-2 py-3 text-center font-bold text-gray-900 bg-gray-100 border-r border-b-2 border-gray-400 sticky top-0 z-25 w-28 min-w-[7rem] max-w-[8rem] whitespace-normal break-words">
+                                        ${test}
+                                    </th>
+                                `).join('')}
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-200 bg-white">
+                            ${students.map((s, idx) => `
+                                <tr class="${idx % 2 === 0 ? 'bg-white' : 'bg-slate-50/60'} hover:bg-blue-50/40">
+                                    <td class="px-4 py-3 font-semibold text-gray-900 border-r-2 border-gray-400 sticky left-0 bg-white z-20 whitespace-nowrap shadow-sm">${s.name}</td>${testNames.map(test => `
+                                        <td class="px-2 py-3 text-center border-r border-gray-100">
+                                            ${s.tests[test] ? '<span class="text-green-600 font-extrabold text-sm">✔</span>' : '<span class="text-gray-300 font-light">-</span>'}
+                                        </td>
+                                    `).join('')}
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+        }
+
+        document.addEventListener('DOMContentLoaded', loadTrackerData);
+    </script>
+</body>
+</html>
