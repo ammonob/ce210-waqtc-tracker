@@ -6,14 +6,6 @@
     <title>CE 210 Materials Lab – WAQTC Progress Tracker</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <style>
-        .writing-mode-vertical {
-            writing-mode: vertical-rl;
-            transform: rotate(180deg);
-            white-space: nowrap;
-            height: 140px;
-        }
-    </style>
 </head>
 <body class="bg-slate-100 min-h-screen font-sans">
 
@@ -32,11 +24,6 @@
                     <p class="text-xs text-blue-200 tracking-wider uppercase font-semibold mt-1">Western Alliance for Quality Transportation Construction · Certification Progress</p>
                 </div>
             </div>
-            <div class="mt-4 md:mt-0">
-                <a href="https://docs.google.com/spreadsheets/d/1X7spwnIoWpaxsxLCxaXKDPYj9tIDPFrNb4Iv5cU2TQc/edit" target="_blank" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-semibold shadow transition duration-200">
-                    Admin Access (Edit Sheet)
-                </a>
-            </div>
         </div>
     </header>
 
@@ -46,7 +33,7 @@
         <!-- Class Leaderboard Section -->
         <section class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
             <h2 class="text-lg font-bold text-gray-800 uppercase tracking-wider mb-4 border-b pb-2">Class Leaderboard</h2>
-            <div id="class-leaderboard" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div id="class-leaderboard">
                 <div class="text-gray-500 text-sm italic py-4">Loading leaderboard rankings...</div>
             </div>
         </section>
@@ -54,7 +41,7 @@
         <!-- Certification Checklist Section -->
         <section class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
             <h2 class="text-lg font-bold text-gray-800 uppercase tracking-wider mb-4 border-b pb-2">Certification Checklist</h2>
-            <div id="certification-checklist" class="overflow-x-auto">
+            <div id="certification-checklist">
                 <div class="text-gray-500 text-sm italic py-8 text-center">Connecting to secure database & loading student progress...</div>
             </div>
         </section>
@@ -78,6 +65,7 @@
                 if (rows.length === 0) return;
 
                 const headers = rows[0]; // First row: Student Name, Sampling, etc.
+                const totalTests = headers.length - 1;
                 const studentRows = rows.slice(1).filter(row => row[0] && row[0].trim() !== '');
 
                 let students = studentRows.map(row => {
@@ -88,7 +76,7 @@
                     for (let i = 1; i < headers.length; i++) {
                         const testName = headers[i];
                         const cellValue = row[i] ? row[i].trim() : '';
-                        const isDone = cellValue !== ''; // True if marked with 'X' or any value
+                        const isDone = cellValue !== ''; 
                         tests[testName] = isDone;
                         if (isDone) completedCount++;
                     }
@@ -99,7 +87,7 @@
                 // Sort students descending by completed tests for leaderboard
                 students.sort((a, b) => b.completedCount - a.completedCount);
 
-                renderLeaderboard(students);
+                renderLeaderboard(students, totalTests);
                 renderChecklist(headers.slice(1), students);
 
             } catch (error) {
@@ -132,27 +120,37 @@
             });
         }
 
-        function renderLeaderboard(students) {
+        function renderLeaderboard(students, totalTests) {
             const container = document.getElementById('class-leaderboard');
             if (!container) return;
 
-            // Take top students or all sorted students
-            container.innerHTML = students.map((s, index) => {
-                let badgeColor = 'bg-blue-100 text-blue-800';
-                if (index === 0) badgeColor = 'bg-amber-100 text-amber-800 border border-amber-300';
-                else if (index === 1) badgeColor = 'bg-slate-200 text-slate-800';
-                else if (index === 2) badgeColor = 'bg-orange-100 text-orange-800';
+            container.innerHTML = `
+                <div class="max-h-[440px] overflow-y-auto pr-2 space-y-2.5">
+                    ${students.map((s, index) => {
+                        let rankDisplay = `#${index + 1}`;
+                        if (index === 0) rankDisplay = '🥇';
+                        else if (index === 1) rankDisplay = '🥈';
+                        else if (index === 2) rankDisplay = '🥉';
 
-                return `
-                    <div class="flex justify-between items-center p-3 bg-gray-50 rounded-lg border border-gray-100 shadow-sm">
-                        <div class="flex items-center space-x-3">
-                            <span class="font-bold text-gray-500 w-6">#${index + 1}</span>
-                            <span class="font-semibold text-gray-800 text-sm">${s.name}</span>
-                        </div>
-                        <span class="${badgeColor} px-2.5 py-1 rounded-full text-xs font-bold">${s.completedCount} Certifications</span>
-                    </div>
-                `;
-            }).join('');
+                        const percent = totalTests > 0 ? (s.completedCount / totalTests) * 100 : 0;
+
+                        return `
+                            <div class="flex items-center p-3 bg-gray-50 rounded-lg border border-gray-100 shadow-sm">
+                                <div class="font-bold text-center w-10 text-lg text-gray-700">${rankDisplay}</div>
+                                <div class="flex-1 ml-3">
+                                    <div class="flex justify-between items-center mb-1">
+                                        <span class="font-semibold text-gray-900 text-sm">${s.name}</span>
+                                        <span class="text-xs font-bold text-gray-700">${s.completedCount} /${totalTests} Certifications</span>
+                                    </div>
+                                    <div class="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden">
+                                        <div class="bg-gradient-to-r from-blue-500 to-green-500 h-2.5 rounded-full transition-all duration-500" style="width: ${percent}%"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    }).join('')}
+                </div>
+            `;
         }
 
         function renderChecklist(testNames, students) {
@@ -160,25 +158,31 @@
             if (!container) return;
 
             container.innerHTML = `
-                <table class="min-w-full divide-y divide-gray-200 text-xs">
-                    <thead>
-                        <tr>
-                            <th class="px-4 py-3 text-left font-bold text-gray-700 bg-gray-50 sticky left-0 z-10 shadow-sm">Student Name</th>
-                            ${testNames.map(test => `<th class="px-2 py-3 text-center font-semibold text-gray-600 bg-gray-50"><div class="writing-mode-vertical mx-auto">${test}</div></th>`).join('')}
-                        </tr>
-                    </thead>
-                    <tbody class="divide-y divide-gray-200 bg-white">
-                        ${students.map((s, idx) => `
-                            <tr class="${idx % 2 === 0 ? 'bg-white' : 'bg-slate-50/50'} hover:bg-blue-50/30">
-                                <td class="px-4 py-3 font-medium text-gray-900 sticky left-0 bg-white shadow-sm">${s.name}</td>${testNames.map(test => `
-                                    <td class="px-2 py-3 text-center">
-                                        ${s.tests[test] ? '<span class="text-green-600 font-extrabold text-sm">✔</span>' : '<span class="text-gray-300 font-light">-</span>'}
-                                    </td>
+                <div class="relative overflow-auto max-h-[580px] border border-gray-200 rounded-lg shadow-inner">
+                    <table class="min-w-full divide-y divide-gray-200 text-xs border-collapse">
+                        <thead>
+                            <tr>
+                                <th class="px-4 py-3 text-left font-bold text-gray-700 bg-gray-50 sticky left-0 top-0 z-30 shadow-sm min-w-[14rem]">Student Name</th>
+                                ${testNames.map(test => `
+                                    <th class="px-2 py-3 text-center font-semibold text-gray-600 bg-gray-50 sticky top-0 z-20 shadow-sm w-28 min-w-[7rem] max-w-[8rem] whitespace-normal break-words">
+                                        ${test}
+                                    </th>
                                 `).join('')}
                             </tr>
-                        `).join('')}
-                    </tbody>
-                </table>
+                        </thead>
+                        <tbody class="divide-y divide-gray-200 bg-white">
+                            ${students.map((s, idx) => `
+                                <tr class="${idx % 2 === 0 ? 'bg-white' : 'bg-slate-50/50'} hover:bg-blue-50/30">
+                                    <td class="px-4 py-3 font-medium text-gray-900 sticky left-0 bg-white z-10 shadow-sm whitespace-nowrap">${s.name}</td>${testNames.map(test => `
+                                        <td class="px-2 py-3 text-center">
+                                            ${s.tests[test] ? '<span class="text-green-600 font-extrabold text-sm">✔</span>' : '<span class="text-gray-300 font-light">-</span>'}
+                                        </td>
+                                    `).join('')}
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>
             `;
         }
 
