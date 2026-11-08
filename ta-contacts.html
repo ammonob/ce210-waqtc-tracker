@@ -12,7 +12,7 @@
 <body class="bg-transparent font-sans">
 
     <div id="ta-container">
-        <div class="text-gray-400 text-xs italic py-2 font-mono">Loading TA info...</div>
+        <div class="text-gray-400 text-sm italic py-2 font-mono">Loading TA info...</div>
     </div>
 
     <script>
@@ -38,7 +38,7 @@
             } catch (err) {
                 console.error(err);
                 document.getElementById('ta-container').innerHTML = `
-                    <div class="text-red-500 text-xs py-2">Unable to load TA contact details.</div>
+                    <div class="text-red-500 text-sm py-2">Unable to load TA contact details.</div>
                 `;
                 notifyParentHeight();
             }
@@ -60,10 +60,10 @@
         function renderTAs(tas) {
             const container = document.getElementById('ta-container');
             container.innerHTML = `
-                <div class="space-y-4 text-xs text-gray-700">
+                <div class="space-y-4 text-sm text-gray-700">
                     ${tas.map(ta => `
                         <div>
-                            <div><strong class="text-gray-900 text-sm">${ta[0]}</strong> – <a href="mailto:${ta[1]}" class="text-blue-600 hover:underline">${ta[1]}</a></div>
+                            <div><strong class="text-gray-900 text-base">${ta[0]}</strong> – <a href="mailto:${ta[1]}" class="text-blue-600 hover:underline">${ta[1]}</a></div>
                             <div class="mt-1 text-gray-600"><span class="font-semibold text-gray-500">Availability:</span> ${ta[2] || 'Contact via email'}</div>
                         </div>
                     `).join('')}
