@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CE 210 Lab – TA Contact Info</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+    </style>
+</head>
+<body class="bg-white font-sans p-1">
+
+    <div id="ta-container">
+        <div class="text-gray-400 text-xs italic py-4 text-center font-mono">Loading TA info...</div>
+    </div>
+
+    <script>
+        // Replace this URL with your published "TA Info" tab CSV URL
+        const TA_CSV_URL = 'YOUR_PUBLISHED_TA_INFO_TAB_CSV_URL_HERE';
+
+        async function loadTAData() {
+            try {
+                const fetchUrl = `${TA_CSV_URL}&t=${new Date().getTime()}`;
+                const response = await fetch(fetchUrl);
+                if (!response.ok) throw new Error("Failed to fetch TA data");
+
+                const csvText = await response.text();
+                const rows = parseCSV(csvText);
+                if (rows.length < 3) return;
+
+                // Slice past Row 1 (instruction) and Row 2 (headers), trim spaces, and filter empty rows
+                const tas = rows.slice(2)
+                    .map(r => r.map(cell => cell.trim()))
+                    .filter(r => r[0] && r[0] !== '');
+
+                renderTAs(tas);
+            } catch (err) {
+                console.error(err);
+                document.getElementById('ta-container').innerHTML = `
+                    <div class="text-red-500 text-xs py-4 text-center">Unable to load TA contact details.</div>
+                `;
+            }
+        }
+
+        function parseCSV(text) {
+            return text.split(/\r\n|\n/).map(line => {
+                let row = [], inQuotes = false, entry = '';
+                for (let char of line) {
+                    if (char === '"') inQuotes = !inQuotes;
+                    else if (char === ',' && !inQuotes) { row.push(entry); entry = ''; }
+                    else entry += char;
+                }
+                row.push(entry);
+                return row.map(c => c.replace(/^"|"$/g, '').trim());
+            }).filter(row => row.some(c => c !== ''));
+        }
+
+        function renderTAs(tas) {
+            const container = document.getElementById('ta-container');
+            container.innerHTML = `
+                <div class="space-y-3">
+                    ${tas.map(ta => `
+                        <div class="border border-gray-200 rounded-lg p-3 bg-white shadow-sm hover:border-gray-300 transition-all">
+                            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center pb-2 border-b border-gray-100 mb-2">
+                                <span class="font-bold text-gray-900 text-sm">${ta[0]}</span>
+                                <a href="mailto:${ta[1]}" class="text-blue-600 hover:underline font-medium text-xs mt-1 sm:mt-0">${ta[1]}</a>
+                            </div>
+                            <div class="text-xs">
+                                <span class="font-semibold text-gray-500 uppercase tracking-wider text-[10px] block mb-0.5">Available Times</span>
+                                <span class="text-gray-800">${ta[2] || 'Contact via email'}</span>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            loadTAData();
+            // Auto-poll every 30 seconds for live updates
+            setInterval(loadTAData, 30000);
+        });
+    </script>
+</body>
+</html>
