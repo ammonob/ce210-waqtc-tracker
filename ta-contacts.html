@@ -6,12 +6,14 @@
     <title>CE 210 Lab – TA Contact Info</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        body { background: transparent; margin: 0; padding: 0; }
+        html, body { background: transparent; height: 100%; margin: 0; padding: 0; overflow: hidden; }
+        .ta-email { text-decoration: none !important; }
+        .ta-email:hover { text-decoration: none !important; }
     </style>
 </head>
 <body class="bg-transparent font-sans">
 
-    <div id="ta-container">
+    <div id="ta-container" class="h-full">
         <div class="text-gray-400 text-sm italic py-2 font-mono">Loading TA info...</div>
     </div>
 
@@ -40,7 +42,6 @@
                 document.getElementById('ta-container').innerHTML = `
                     <div class="text-red-500 text-sm py-2">Unable to load TA contact details.</div>
                 `;
-                notifyParentHeight();
             }
         }
 
@@ -60,23 +61,18 @@
         function renderTAs(tas) {
             const container = document.getElementById('ta-container');
             container.innerHTML = `
-                <div class="space-y-4 text-sm text-gray-700">
+                <div class="h-full flex flex-col justify-between text-sm text-gray-700">
                     ${tas.map(ta => `
                         <div>
-                            <div><strong class="text-gray-900 text-base">${ta[0]}</strong> – <a href="mailto:${ta[1]}" class="text-blue-600 hover:underline">${ta[1]}</a></div>
+                            <div class="flex justify-between items-baseline">
+                                <strong class="text-gray-900 text-base">${ta[0]}</strong>
+                                <a href="https://mail.google.com/mail/?view=cm&fs=1&to=${ta[1]}" target="_blank" rel="noopener" class="text-blue-600 text-sm ta-email">${ta[1]}</a>
+                            </div>
                             <div class="mt-1 text-gray-600"><span class="font-semibold text-gray-500">Availability:</span> ${ta[2] || 'Contact via email'}</div>
                         </div>
                     `).join('')}
                 </div>
             `;
-            notifyParentHeight();
-        }
-
-        function notifyParentHeight() {
-            setTimeout(() => {
-                const height = document.documentElement.scrollHeight;
-                window.parent.postMessage({ type: 'resize-ta-iframe', height: height }, '*');
-            }, 50);
         }
 
         document.addEventListener('DOMContentLoaded', () => {
