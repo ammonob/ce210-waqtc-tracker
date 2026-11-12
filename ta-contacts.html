@@ -13,12 +13,22 @@
 </head>
 <body class="bg-transparent font-sans">
 
-    <div id="ta-container" class="h-full">
-        <div class="text-gray-400 text-sm italic py-2 font-mono">Loading TA info...</div>
+    <div id="ta-container" class="h-full flex flex-col justify-center items-center text-center">
+        <div class="text-gray-400 text-sm italic py-2 flex items-center justify-center">
+            <span>Loading TA Information</span>
+            <span class="inline-flex ml-1.5 space-x-1">
+                <span class="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" style="animation-delay: 0s;"></span>
+                <span class="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" style="animation-delay: 0.2s;"></span>
+                <span class="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" style="animation-delay: 0.4s;"></span>
+            </span>
+        </div>
+        <div class="text-gray-400 text-xs italic">Refresh page if taking too long.</div>
     </div>
 
     <script>
         const TA_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQtseO-b1lNH6L6ltARhp7fC-s4UNylDTRVkivnRYeH40yv2hvyCqZe3a2R0K9sy4BRRLMjh_R78NIK/pub?gid=688018773&single=true&output=csv';
+        
+        let cachedTAs = null;
 
         async function loadTAData() {
             try {
@@ -36,12 +46,25 @@
                     .map(r => r.map(cell => cell.trim()))
                     .filter(r => r[0] && r[0] !== '');
 
+                cachedTAs = tas;
                 renderTAs(tas);
             } catch (err) {
-                console.error(err);
-                document.getElementById('ta-container').innerHTML = `
-                    <div class="text-red-500 text-sm py-2">Unable to load TA contact details.</div>
-                `;
+                console.error("Fetch failed, keeping cached data if available:", err);
+                
+                if (!cachedTAs) {
+                    document.getElementById('ta-container').className = "h-full flex flex-col justify-center items-center text-center";
+                    document.getElementById('ta-container').innerHTML = `
+                        <div class="text-gray-400 text-sm italic py-2 flex items-center justify-center">
+                            <span>Loading TA Information</span>
+                            <span class="inline-flex ml-1.5 space-x-1">
+                                <span class="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" style="animation-delay: 0s;"></span>
+                                <span class="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" style="animation-delay: 0.2s;"></span>
+                                <span class="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" style="animation-delay: 0.4s;"></span>
+                            </span>
+                        </div>
+                        <div class="text-gray-400 text-xs italic">Refresh page if taking too long.</div>
+                    `;
+                }
             }
         }
 
@@ -60,18 +83,17 @@
 
         function renderTAs(tas) {
             const container = document.getElementById('ta-container');
+            container.className = "h-full flex flex-col justify-between text-sm text-gray-700";
             container.innerHTML = `
-                <div class="h-full flex flex-col justify-between text-sm text-gray-700">
-                    ${tas.map(ta => `
-                        <div>
-                            <div class="flex justify-between items-baseline">
-                                <strong class="text-gray-900 text-base">${ta[0]}</strong>
-                                <a href="https://mail.google.com/mail/?view=cm&fs=1&to=${ta[1]}" target="_blank" rel="noopener" class="text-blue-600 text-sm ta-email">${ta[1]}</a>
-                            </div>
-                            <div class="mt-1 text-gray-600"><span class="font-semibold text-gray-500">Availability:</span> ${ta[2] || 'Contact via email'}</div>
+                ${tas.map(ta => `
+                    <div>
+                        <div class="flex justify-between items-baseline">
+                            <strong class="text-gray-900 text-base">${ta[0]}</strong>
+                            <a href="https://mail.google.com/mail/?view=cm&fs=1&to=${ta[1]}" target="_blank" rel="noopener" class="text-blue-600 text-sm ta-email">${ta[1]}</a>
                         </div>
-                    `).join('')}
-                </div>
+                        <div class="mt-1 text-gray-600"><span class="font-semibold text-gray-500">Availability:</span> ${ta[2] || 'Contact via email'}</div>
+                    </div>
+                `).join('')}
             `;
         }
 
