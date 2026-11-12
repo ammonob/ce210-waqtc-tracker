@@ -6,15 +6,20 @@
     <title>CE 210 Lab – TA Contact Info</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        html, body { background: transparent; height: 100%; margin: 0; padding: 0; overflow: hidden; }
+        html, body { background: transparent; height: 100%; margin: 0; padding: 0; }
+        /* Custom clean scrollbar */
+        ::-webkit-scrollbar { width: 5px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
         .ta-email { text-decoration: none !important; }
         .ta-email:hover { text-decoration: none !important; }
     </style>
 </head>
-<body class="bg-transparent font-sans">
+<body class="bg-transparent font-sans" style="overflow-y: hidden;">
 
-    <div id="ta-container" class="h-full flex flex-col justify-center items-center text-center">
-        <div class="text-gray-400 text-sm italic py-2 flex items-center justify-center">
+    <div id="ta-container" class="space-y-3 text-sm text-gray-700 pr-1">
+        <div class="text-gray-400 text-sm italic py-2 flex items-center">
             <span>Loading TA Information</span>
             <span class="inline-flex ml-1.5 space-x-1">
                 <span class="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" style="animation-delay: 0s;"></span>
@@ -52,9 +57,9 @@
                 console.error("Fetch failed, keeping cached data if available:", err);
                 
                 if (!cachedTAs) {
-                    document.getElementById('ta-container').className = "h-full flex flex-col justify-center items-center text-center";
+                    document.body.style.overflowY = 'hidden';
                     document.getElementById('ta-container').innerHTML = `
-                        <div class="text-gray-400 text-sm italic py-2 flex items-center justify-center">
+                        <div class="text-gray-400 text-sm italic py-2 flex items-center">
                             <span>Loading TA Information</span>
                             <span class="inline-flex ml-1.5 space-x-1">
                                 <span class="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" style="animation-delay: 0s;"></span>
@@ -82,16 +87,23 @@
         }
 
         function renderTAs(tas) {
+            // Apply scrolling ONLY if there are 4 or more TAs
+            if (tas.length >= 4) {
+                document.body.style.overflowY = 'auto';
+            } else {
+                document.body.style.overflowY = 'hidden';
+            }
+
             const container = document.getElementById('ta-container');
-            container.className = "h-full flex flex-col justify-between text-sm text-gray-700";
+            container.className = "space-y-3 text-sm text-gray-700 pr-1";
             container.innerHTML = `
                 ${tas.map(ta => `
                     <div>
-                        <div class="flex justify-between items-baseline">
+                        <div class="flex justify-between items-baseline gap-2">
                             <strong class="text-gray-900 text-base">${ta[0]}</strong>
                             <a href="https://mail.google.com/mail/?view=cm&fs=1&to=${ta[1]}" target="_blank" rel="noopener" class="text-blue-600 text-sm ta-email">${ta[1]}</a>
                         </div>
-                        <div class="mt-1 text-gray-600"><span class="font-semibold text-gray-500">Availability:</span> ${ta[2] || 'Contact via email'}</div>
+                        <div class="text-gray-600"><span class="font-semibold text-gray-500">Availability:</span> ${ta[2] || 'Contact via email'}</div>
                     </div>
                 `).join('')}
             `;
