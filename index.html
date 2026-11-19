@@ -76,7 +76,69 @@
     <!-- JavaScript Data Fetcher, UI Renderer & Loader Animator -->
     <script>
         const BASE_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQtseO-b1lNH6L6ltARhp7fC-s4UNylDTRVkivnRYeH40yv2hvyCqZe3a2R0K9sy4BRRLMjh_R78NIK/pub?output=csv';
+
+        // Publish the "Consented_List" tab as CSV in Google Sheets (File -> Share -> Publish to web -> Consented_List -> CSV)
+        // and paste that published CSV URL below (or set CONSENTED_GID if using a gviz/published sheet URL).
+        const CONSENTED_CSV_URL = 'PASTE_CONSENTED_LIST_PUBLISHED_CSV_URL_HERE';
+
         let loadingInterval = null;
+
+        function normalizeName(name) {
+            return String(name || '')
+                .trim()
+                .toLowerCase()
+                .replace(/\s+/g, ' ');
+        }
+
+        function flipLastFirstName(name) {
+            const cleaned = String(name || '').trim();
+            const commaIdx = cleaned.indexOf(',');
+            if (commaIdx === -1) return cleaned;
+            const last = cleaned.slice(0, commaIdx).trim();
+            const firstRest = cleaned.slice(commaIdx + 1).trim();
+            return `${firstRest} ${last}`.trim();
+        }
+
+        function buildConsentMap(consentedRows) {
+            const statusMap = new Map();
+            if (!Array.isArray(consentedRows) || consentedRows.length < 2) {
+                return statusMap;
+            }
+
+            const headerRow = consentedRows[0].map(h => String(h || '').trim().toLowerCase());
+            let nameCol = headerRow.findIndex(h => h.includes('student name') || h === 'name');
+            let statusCol = headerRow.findIndex(h => h.includes('opted-in') || h.includes('opted in') || h === 'consent' || h === 'status');
+
+            if (nameCol === -1) nameCol = 0;
+            if (statusCol === -1) statusCol = 1;
+
+            consentedRows.slice(1).forEach(row => {
+                const rawName = String(row[nameCol] || '').trim();
+                const rawStatus = String(row[statusCol] || '').trim();
+                if (!rawName) return;
+
+                const aliases = [normalizeName(rawName), normalizeName(flipLastFirstName(rawName))];
+                aliases.forEach(key => {
+                    if (key) {
+                        statusMap.set(key, rawStatus);
+                    }
+                });
+            });
+
+            return statusMap;
+        }
+
+        function isStudentConsented(studentName, consentMap) {
+            const keys = [normalizeName(studentName), normalizeName(flipLastFirstName(studentName))];
+            for (const key of keys) {
+                if (!key || !consentMap.has(key)) continue;
+                const status = String(consentMap.get(key) || '').trim().toLowerCase();
+                if (status === 'yes' || status === 'true' || status.startsWith('yes, i consent')) {
+                    return true;
+                }
+            }
+            return false;
+        }
 
         function startLoadingAnimation() {
             let frames = [
@@ -103,21 +165,38 @@
             }
         }
 
+        async function fetchCsvRows(baseUrl) {
+            const sep = baseUrl.includes('?') ? '&' : '?';
+            const fetchUrl = `${baseUrl}${sep}t=${new Date().getTime()}`;
+            const response = await fetch(fetchUrl);
+            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+            const csvText = await response.text();
+            return parseCSV(csvText);
+        }
+
         async function loadTrackerData() {
             try {
-                const CSV_URL = `${BASE_CSV_URL}&t=${new Date().getTime()}`;
-                const response = await fetch(CSV_URL);
-                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-                
-                const csvText = await response.text();
-                const rows = parseCSV(csvText);
-                if (rows.length === 0) throw new Error("CSV file is empty");
+                if (!CONSENTED_CSV_URL || CONSENTED_CSV_URL.includes('PASTE_CONSENTED_LIST_PUBLISHED_CSV_URL_HERE')) {
+                    throw new Error('Set CONSENTED_CSV_URL to the published CSV URL of the Consented_List sheet.');
+                }
 
-                const headers = rows[0]; 
+                const [progressRows, consentedRows] = await Promise.all([
+                    fetchCsvRows(BASE_CSV_URL),
+                    fetchCsvRows(CONSENTED_CSV_URL)
+                ]);
+
+                if (progressRows.length === 0) throw new Error("CSV file is empty");
+
+                const consentMap = buildConsentMap(consentedRows);
+                const headers = progressRows[0];
                 const totalTests = headers.length - 1;
-                const studentRows = rows.slice(1).filter(row => row && row[0] && row[0].trim() !== '');
 
-                // Keep students in the exact sheet order (top to bottom)
+                // Keep only students who have "Yes" in Consented_List, preserving Progress sheet order
+                const studentRows = progressRows
+                    .slice(1)
+                    .filter(row => row && row[0] && row[0].trim() !== '')
+                    .filter(row => isStudentConsented(row[0], consentMap));
+
                 let sheetOrderStudents = studentRows.map(row => {
                     const name = row[0];
                     let completedCount = 0;
@@ -126,7 +205,7 @@
                     for (let i = 1; i < headers.length; i++) {
                         const testName = headers[i];
                         const cellValue = row[i] ? row[i].trim() : '';
-                        const isDone = cellValue !== ''; 
+                        const isDone = cellValue !== '';
                         tests[testName] = isDone;
                         if (isDone) completedCount++;
                     }
@@ -179,6 +258,11 @@
             const container = document.getElementById('class-leaderboard');
             if (!container) return;
 
+            if (!students.length) {
+                container.innerHTML = `<div class="text-gray-500 text-sm italic py-4">No consented students to display yet.</div>`;
+                return;
+            }
+
             container.innerHTML = `
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
                     ${students.map((s, index) => {
@@ -211,6 +295,11 @@
         function renderChecklist(testNames, students) {
             const container = document.getElementById('certification-checklist');
             if (!container) return;
+
+            if (!students.length) {
+                container.innerHTML = `<div class="text-gray-500 text-sm italic py-6 text-center">No consented student progress records to display yet.</div>`;
+                return;
+            }
 
             container.innerHTML = `
                 <div class="relative overflow-auto max-h-[580px] border border-gray-300 rounded-lg shadow-sm">
