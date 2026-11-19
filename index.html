@@ -76,10 +76,7 @@
     <!-- JavaScript Data Fetcher, UI Renderer & Loader Animator -->
     <script>
         const BASE_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQtseO-b1lNH6L6ltARhp7fC-s4UNylDTRVkivnRYeH40yv2hvyCqZe3a2R0K9sy4BRRLMjh_R78NIK/pub?output=csv';
-
-        // Publish the "Consented_List" tab as CSV in Google Sheets (File -> Share -> Publish to web -> Consented_List -> CSV)
-        // and paste that published CSV URL below (or set CONSENTED_GID if using a gviz/published sheet URL).
-        const CONSENTED_CSV_URL = 'PASTE_CONSENTED_LIST_PUBLISHED_CSV_URL_HERE';
+        const CONSENTED_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQtseO-b1lNH6L6ltARhp7fC-s4UNylDTRVkivnRYeH40yv2hvyCqZe3a2R0K9sy4BRRLMjh_R78NIK/pub?gid=801671103&single=true&output=csv';
 
         let loadingInterval = null;
 
@@ -176,10 +173,6 @@
 
         async function loadTrackerData() {
             try {
-                if (!CONSENTED_CSV_URL || CONSENTED_CSV_URL.includes('PASTE_CONSENTED_LIST_PUBLISHED_CSV_URL_HERE')) {
-                    throw new Error('Set CONSENTED_CSV_URL to the published CSV URL of the Consented_List sheet.');
-                }
-
                 const [progressRows, consentedRows] = await Promise.all([
                     fetchCsvRows(BASE_CSV_URL),
                     fetchCsvRows(CONSENTED_CSV_URL)
