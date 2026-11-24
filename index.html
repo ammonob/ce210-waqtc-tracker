@@ -76,66 +76,7 @@
     <!-- JavaScript Data Fetcher, UI Renderer & Loader Animator -->
     <script>
         const BASE_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQtseO-b1lNH6L6ltARhp7fC-s4UNylDTRVkivnRYeH40yv2hvyCqZe3a2R0K9sy4BRRLMjh_R78NIK/pub?output=csv';
-        const CONSENTED_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQtseO-b1lNH6L6ltARhp7fC-s4UNylDTRVkivnRYeH40yv2hvyCqZe3a2R0K9sy4BRRLMjh_R78NIK/pub?gid=801671103&single=true&output=csv';
-
         let loadingInterval = null;
-
-        function normalizeName(name) {
-            return String(name || '')
-                .trim()
-                .toLowerCase()
-                .replace(/\s+/g, ' ');
-        }
-
-        function flipLastFirstName(name) {
-            const cleaned = String(name || '').trim();
-            const commaIdx = cleaned.indexOf(',');
-            if (commaIdx === -1) return cleaned;
-            const last = cleaned.slice(0, commaIdx).trim();
-            const firstRest = cleaned.slice(commaIdx + 1).trim();
-            return `${firstRest} ${last}`.trim();
-        }
-
-        function buildConsentMap(consentedRows) {
-            const statusMap = new Map();
-            if (!Array.isArray(consentedRows) || consentedRows.length < 2) {
-                return statusMap;
-            }
-
-            const headerRow = consentedRows[0].map(h => String(h || '').trim().toLowerCase());
-            let nameCol = headerRow.findIndex(h => h.includes('student name') || h === 'name');
-            let statusCol = headerRow.findIndex(h => h.includes('opted-in') || h.includes('opted in') || h === 'consent' || h === 'status');
-
-            if (nameCol === -1) nameCol = 0;
-            if (statusCol === -1) statusCol = 1;
-
-            consentedRows.slice(1).forEach(row => {
-                const rawName = String(row[nameCol] || '').trim();
-                const rawStatus = String(row[statusCol] || '').trim();
-                if (!rawName) return;
-
-                const aliases = [normalizeName(rawName), normalizeName(flipLastFirstName(rawName))];
-                aliases.forEach(key => {
-                    if (key) {
-                        statusMap.set(key, rawStatus);
-                    }
-                });
-            });
-
-            return statusMap;
-        }
-
-        function isStudentConsented(studentName, consentMap) {
-            const keys = [normalizeName(studentName), normalizeName(flipLastFirstName(studentName))];
-            for (const key of keys) {
-                if (!key || !consentMap.has(key)) continue;
-                const status = String(consentMap.get(key) || '').trim().toLowerCase();
-                if (status === 'yes' || status === 'true' || status.startsWith('yes, i consent')) {
-                    return true;
-                }
-            }
-            return false;
-        }
 
         function startLoadingAnimation() {
             let frames = [
@@ -162,46 +103,62 @@
             }
         }
 
-        async function fetchCsvRows(baseUrl) {
-            const sep = baseUrl.includes('?') ? '&' : '?';
-            const fetchUrl = `${baseUrl}${sep}t=${new Date().getTime()}`;
-            const response = await fetch(fetchUrl);
-            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-            const csvText = await response.text();
-            return parseCSV(csvText);
+        function isOptedInValue(val) {
+            const cleaned = String(val || '').trim().toLowerCase();
+            return cleaned === 'yes' || cleaned === 'true' || cleaned.startsWith('yes, i consent');
         }
 
         async function loadTrackerData() {
             try {
-                const [progressRows, consentedRows] = await Promise.all([
-                    fetchCsvRows(BASE_CSV_URL),
-                    fetchCsvRows(CONSENTED_CSV_URL)
-                ]);
+                const CSV_URL = `${BASE_CSV_URL}&t=${new Date().getTime()}`;
+                const response = await fetch(CSV_URL);
+                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
 
-                if (progressRows.length === 0) throw new Error("CSV file is empty");
+                const csvText = await response.text();
+                const rows = parseCSV(csvText);
+                if (rows.length === 0) throw new Error("CSV file is empty");
 
-                const consentMap = buildConsentMap(consentedRows);
-                const headers = progressRows[0];
-                const totalTests = headers.length - 1;
+                const headers = rows[0];
 
-                // Keep only students who have "Yes" in Consented_List, preserving Progress sheet order
-                const studentRows = progressRows
-                    .slice(1)
-                    .filter(row => row && row[0] && row[0].trim() !== '')
-                    .filter(row => isStudentConsented(row[0], consentMap));
+                // Detect if Column B (or any column) is the hidden "Opted-In" filter column
+                const optInColIndex = headers.findIndex(h => {
+                    const norm = String(h || '').trim().toLowerCase();
+                    return norm === 'opted-in' || norm === 'opted in' || norm === 'consent';
+                });
 
+                // Build list of visible lab test column indices (excluding Column A name and hidden Opted-In column)
+                const testColumnIndices = [];
+                const visibleTestNames = [];
+                for (let i = 1; i < headers.length; i++) {
+                    if (i === optInColIndex) continue;
+                    testColumnIndices.push(i);
+                    visibleTestNames.push(headers[i]);
+                }
+
+                const totalTests = visibleTestNames.length;
+
+                // Filter to students whose Opted-In column is "Yes" (if the column exists)
+                const studentRows = rows.slice(1).filter(row => {
+                    if (!row || !row[0] || row[0].trim() === '') return false;
+                    if (optInColIndex !== -1) {
+                        return isOptedInValue(row[optInColIndex]);
+                    }
+                    return true;
+                });
+
+                // Keep students in the exact sheet order (top to bottom)
                 let sheetOrderStudents = studentRows.map(row => {
                     const name = row[0];
                     let completedCount = 0;
                     const tests = {};
 
-                    for (let i = 1; i < headers.length; i++) {
-                        const testName = headers[i];
-                        const cellValue = row[i] ? row[i].trim() : '';
+                    testColumnIndices.forEach(colIdx => {
+                        const testName = headers[colIdx];
+                        const cellValue = row[colIdx] ? row[colIdx].trim() : '';
                         const isDone = cellValue !== '';
                         tests[testName] = isDone;
                         if (isDone) completedCount++;
-                    }
+                    });
 
                     return { name, completedCount, tests };
                 });
@@ -211,7 +168,7 @@
 
                 stopLoadingAnimation();
                 renderLeaderboard(leaderboardStudents, totalTests);
-                renderChecklist(headers.slice(1), sheetOrderStudents);
+                renderChecklist(visibleTestNames, sheetOrderStudents);
 
             } catch (error) {
                 console.error("Failed to load Google Sheet data:", error);
@@ -251,11 +208,6 @@
             const container = document.getElementById('class-leaderboard');
             if (!container) return;
 
-            if (!students.length) {
-                container.innerHTML = `<div class="text-gray-500 text-sm italic py-4">No consented students to display yet.</div>`;
-                return;
-            }
-
             container.innerHTML = `
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
                     ${students.map((s, index) => {
@@ -288,11 +240,6 @@
         function renderChecklist(testNames, students) {
             const container = document.getElementById('certification-checklist');
             if (!container) return;
-
-            if (!students.length) {
-                container.innerHTML = `<div class="text-gray-500 text-sm italic py-6 text-center">No consented student progress records to display yet.</div>`;
-                return;
-            }
 
             container.innerHTML = `
                 <div class="relative overflow-auto max-h-[580px] border border-gray-300 rounded-lg shadow-sm">
