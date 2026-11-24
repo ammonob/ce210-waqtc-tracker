@@ -75,7 +75,8 @@
 
     <!-- JavaScript Data Fetcher, UI Renderer & Loader Animator -->
     <script>
-        const BASE_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQtseO-b1lNH6L6ltARhp7fC-s4UNylDTRVkivnRYeH40yv2hvyCqZe3a2R0K9sy4BRRLMjh_R78NIK/pub?output=csv';
+        // Targets "Progress" tab directly by permanent gid=563770736 (survives tab renames and reordering)
+        const BASE_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQtseO-b1lNH6L6ltARhp7fC-s4UNylDTRVkivnRYeH40yv2hvyCqZe3a2R0K9sy4BRRLMjh_R78NIK/pub?gid=563770736&single=true&output=csv';
         let loadingInterval = null;
 
         function startLoadingAnimation() {
@@ -120,7 +121,7 @@
 
                 const headers = rows[0];
 
-                // Detect if Column B (or any column) is the hidden "Opted-In" filter column
+                // Detect the hidden "Opted-In" filter column (Column B)
                 const optInColIndex = headers.findIndex(h => {
                     const norm = String(h || '').trim().toLowerCase();
                     return norm === 'opted-in' || norm === 'opted in' || norm === 'consent';
@@ -137,7 +138,7 @@
 
                 const totalTests = visibleTestNames.length;
 
-                // Filter to students whose Opted-In column is "Yes" (if the column exists)
+                // Filter to students whose Opted-In column is "Yes"
                 const studentRows = rows.slice(1).filter(row => {
                     if (!row || !row[0] || row[0].trim() === '') return false;
                     if (optInColIndex !== -1) {
